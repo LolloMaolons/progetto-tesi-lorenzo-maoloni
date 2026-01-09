@@ -1,4 +1,7 @@
+fastapi
+uvicorn
 requests==2.31.0
 redis==5.2.0
 python-json-logger==2.0.7
 PyJWT
+pydantic

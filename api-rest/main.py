@@ -203,7 +203,7 @@ async def get_recommendations(request: Request, pid: int, limit: int = 3, user =
         items = (items + others)[:limit]
     return items[:limit]
 
-@app. patch("/products/{pid}", response_model=Product)
+@app.patch("/products/{pid}", response_model=Product)
 @limiter.limit(RATE_LIMIT)
 async def update_product(request: Request, pid: int, stock: int | None = None, price: float | None = None, user = Depends(require_role("admin"))):
     p = DB_PRODUCTS.get(pid)
@@ -213,6 +213,10 @@ async def update_product(request: Request, pid: int, stock: int | None = None, p
         p.stock = stock
         try:
             r.publish("events", json.dumps({"type": "stock_update", "id": pid, "stock": stock}))
+            
+            THRESHOLD = 25
+            if stock <= THRESHOLD:
+                r.publish("product-lowstock", str(pid))
         except Exception as e: 
             logger.error(f"Redis publish stock_update error: {e}", extra={"request_id": request_id_ctx.get()})
     if price is not None:

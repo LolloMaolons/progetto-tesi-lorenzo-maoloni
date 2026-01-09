@@ -87,9 +87,7 @@ services:
     depends_on:
       api-rest:
         condition: service_healthy
-      mcp-server-catalog:
-        condition: service_started
-      mcp-server-orders:
-        condition: service_started
       redis:
         condition: service_healthy
+    ports:
+    - "5000:5000"

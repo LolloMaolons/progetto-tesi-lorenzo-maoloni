@@ -1,0 +1,21 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - name: Lancia workflow MCP - discountAllLowStock
+    flow:
+      - post:
+          url: "/rpc"
+          json:
+            jsonrpc: "2.0"
+            id: "{{ $randomInt(1, 1000000) }}"
+            method: "discountAllLowStock"
+            params:
+              discount: 10
+              threshold: 25
+      - think: 1
