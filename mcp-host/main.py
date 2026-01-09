@@ -52,7 +52,7 @@ def log(msg, **extra):
     logger.info(msg, extra={"trace_id": TRACE_ID, **extra})
 
 def get_headers():
-    if JWT_SECRET:
+    global JWT_SECRET
         token = pyjwt.encode(
             {"sub": "mcp-host", "role": "admin", "exp": int(time.time()) + 3600},
             JWT_SECRET,
