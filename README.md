@@ -1,41 +1,26 @@
-# Architettura ibrida REST + GraphQL + WebSocket + MCP (demo tesi)
+# Architettura ibrida REST + GraphQL + WebSocket + MCP (demo tesi)  
+**README duale: Bash & PowerShell**
 
-Questa demo implementa e mostra la coesistenza dei quattro paradigmi descritti in tesi:
-- **REST** per gestione risorse CRUD e stato autorevole
-- **GraphQL** per viste client-driven, riduzione over/under-fetching, aggregazione dati
-- **WebSocket** per notifiche real-time di aggiornamenti
-- **MCP (Model Context Protocol)** per orchestrazione agent-based: l’agente MCP-host applica sconti/azioni solo su richiesta esplicita tramite tool JSON-RPC, secondo lo standard MCP
+Questa demo implementa e mostra l'integrazione di REST, GraphQL, WebSocket e MCP agent/LLM come descritto nel capitolo metodologico.  
+**Tutte le procedure, test e utility sono presentate in parallelo PowerShell & Bash**  
+(permette massima ripetibilità su qualsiasi ambiente dev/didattico).
 
 ---
 
 ## Indice
 
 - [Requisiti](#requisiti)
-- [Preparazione dell'ambiente](#preparazione-dellambiente)
-- [Avvio rapido](#avvio-rapido)
+- [Preparazione ambiente](#preparazione-ambiente)
+- [Avvio rapido (Bash e PowerShell)](#avvio-rapido-bash-e-powershell)
 - [Servizi inclusi](#servizi-inclusi)
-- [Testing funzionale e test end-to-end](#testing-funzionale-e-test-end-to-end)
-  - [REST](#test-rest)
-  - [GraphQL](#test-graphql)
-  - [WebSocket](#test-websocket)
-  - [MCP Tool/Agent](#test-mcp-agent)
-  - [Verifica effetti](#verifica-effetti)
+- [Test funzionali](#test-funzionali)
 - [Autenticazione JWT (opzionale)](#autenticazione-jwt-opzionale)
-  - [Abilitazione JWT e generazione token](#abilitazione-jwt-e-generazione-token)
-  - [Ruoli e policy](#ruoli-e-policy)
-- [Osservabilità](#osservabilità)
-- [Load Testing con Artillery](#load-testing-con-artillery)
-  - [Risultati test presenti](#risultati-test-presenti)
-  - [Benchmark & Confronto MCP/REST](#benchmark--confronto-mcprest)
-- [Test avanzati](#test-avanzati)
-  - [Test sicurezza](#test-sicurezza)
-    - [JWT](#test-jwt)
-    - [Rate Limiting](#test-rate-limiting)
-    - [GraphQL Depth Limiting](#test-graphql-depth-limiting)
-    - [WebSocket Allowed Origins e payload](#test-allowed-origins-e-payload)
-  - [Test osservabilità](#test-osservabilità)
-- [Script utility](#script-utility)
-- [Variabili d'ambiente](#variabili-dambiente)
+- [Osservabilità e metriche](#osservabilità-e-metriche)
+- [Load test & Benchmark (Artillery)](#load-test--benchmark-artillery)
+- [Sezione test](#sezione-test)
+- [Sicurezza](#sicurezza)
+- [Script e utility](#script-e-utility)
+- [Variabili d’ambiente](#variabili-dambiente)
 - [Architettura logica](#architettura-logica)
 - [Troubleshooting](#troubleshooting)
 
@@ -43,87 +28,91 @@ Questa demo implementa e mostra la coesistenza dei quattro paradigmi descritti i
 
 ## Requisiti
 
-- **Docker** e **Docker Compose** installati (versione 20.10+ raccomandata)
-- **Node.js (>=18.x)** (per `wscat` e Artillery)
-- **Python 3.11+** (per test agent MCP e tool in locale)
-- **Artillery**: `npm install -g artillery` (per load e benchmark)
+- **Docker** e **Docker Compose**
+- **Node.js** (per wscat, artillery)
+- **Python 3.11+** (opzionale: test locali, MCP host)
+- **Artillery**:
+  - Bash/PowerShell: `npm install -g artillery`
+- **wscat**:
+  - Bash/PowerShell: `npm install -g wscat`
 
 ---
 
-## Preparazione dell'ambiente
+## Preparazione ambiente
 
-1. Clona la repository:
+### 1. Clona la repo
 
-   ```bash
-   git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
-   cd progetto-tesi-lorenzo-maoloni
-   ```
+**Bash:**
+```bash
+git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
+cd progetto-tesi-lorenzo-maoloni
+```
+**PowerShell:**
+```powershell
+git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
+cd progetto-tesi-lorenzo-maoloni
+```
 
-2. (Primo uso) Pulisci e costruisci:
+### 2. Pulizia e build
 
-   ```bash
-   docker compose down -v
-   docker compose build
-   ```
-
-3. Installa strumenti opzionali:
-
-   - **Artillery:**  
-     ```bash
-     npm install -g artillery
-     ```
-   - **WebSocket client:**  
-     ```bash
-     npm install -g wscat
-     ```
+**Bash:**
+```bash
+docker compose down -v
+docker compose build
+```
+**PowerShell:**
+```powershell
+docker compose down -v
+docker compose build
+```
 
 ---
 
-## Avvio rapido
+## Avvio rapido (Bash e PowerShell)
 
-### Avvia i servizi (stateless, in-memory)
-
+**Bash:**
 ```bash
 docker compose up -d
 docker compose ps
 ```
-
-#### Pull-down/clean completa:
-
-```bash
-docker compose down -v
-docker compose build
+**PowerShell:**
+```powershell
 docker compose up -d
+docker compose ps
 ```
+
+Controlla servizi attivi e prosegui con i test.
 
 ---
 
 ## Servizi inclusi
 
-| Servizio                | Tecnologia        | Porta    | Descrizione                                               |
-|-------------------------|------------------|----------|-----------------------------------------------------------|
-| **redis**               | Redis 7.x        | 6379     | Pub/Sub eventi e storage volatile                         |
-| **api-rest**            | FastAPI          | 8080     | API REST, stato prodotti (in-memory), genera eventi Redis |
-| **gateway-graphql**     | Apollo Server    | 4000     | API GraphQL, aggrega dati REST, esegue logica composita   |
-| **ws-events**           | Node.js + ws     | 7070     | WebSocket server, inoltra eventi Redis ai client          |
-| **mcp-server-catalog**  | Python MCP       | 5002     | MCP server: tool su prodotti/catalogo                     |
-| **mcp-server-orders**   | Python MCP (mock)| 5003     | MCP server: tool mock ordini                              |
-| **mcp-host**            | FastAPI MCP host | 5000     | MCP orchestrator/agent: invoca tool su richiesta agent/LLM|
+| Servizio             | Porta | Descrizione fondamentale      |
+|----------------------|-------|------------------------------|
+| api-rest             | 8080  | API REST prodotti            |
+| gateway-graphql      | 4000  | API GraphQL (aggregazione)   |
+| ws-events            | 7070  | WebSocket eventi             |
+| redis                | 6379  | Pub/Sub                      |
+| mcp-host             | 5000  | Orchestratore MCP agent      |
+| mcp-server-catalog   | 5002  | Tool MCP prodotti            |
+| mcp-server-orders    | 5003  | Tool MCP mock ordini         |
 
 ---
 
-## Testing funzionale e test end-to-end
+## Test funzionali
 
 ### Test REST
 
+**Bash**
 ```bash
-curl http://localhost:8080/products      # Lista
-curl http://localhost:8080/products/1    # Dettaglio
+curl http://localhost:8080/products
+curl http://localhost:8080/products/1
 curl -X PATCH "http://localhost:8080/products/1?stock=8&price=1000"
 ```
-PowerShell:
+**PowerShell**
 ```powershell
 Invoke-RestMethod http://localhost:8080/products
+Invoke-RestMethod http://localhost:8080/products/1
 Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=8&price=1000" -Method Patch
 ```
 
@@ -131,287 +120,327 @@ Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=8&price=1000" -Me
 
 Apri browser su [http://localhost:4000/graphql](http://localhost:4000/graphql)
 
-Esempio query:
+Query demo:
 ```graphql
 {
-  products { id name price stock lowStock }
+  products { id name price stock }
   product(id: 1) { id name price stock }
 }
 ```
 
 ### Test WebSocket
 
-Ricevi eventi live da Redis:
-
+**Bash**
 ```bash
 wscat -c ws://localhost:7070/ws
 ```
-
-### Test MCP Agent
-
-Esegui orchestrazione batch da agente:
-
-```bash
-docker compose run --rm mcp-host
-# Oppure local:
-python mcp-host/main.py
+**PowerShell**
+```powershell
+wscat -c ws://localhost:7070/ws
 ```
 
-Chiamata tool singolo via MCP-host (JSON-RPC):
+### Test MCP strumenti/agent
 
+Batch orchestrazione (non automatica: sempre su richiesta MCP!):
+
+**Bash:**
+```bash
+docker compose run --rm mcp-host
+```
+**PowerShell:**
+```powershell
+docker compose run --rm mcp-host
+```
+
+Chiamata diretta tool MCP:
+
+**Bash:**
 ```bash
 curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
 ```
+**PowerShell:**
+```powershell
+Invoke-WebRequest -Uri http://localhost:5000/rpc -Method POST `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"jsonrpc":"2.0", "id":1, "method":"discountAllLowStock", "params":{"discount":10,"threshold":15}}'
+```
 
 ---
 
-### Verifica effetti
+### Verifica effetti (tutti i layer)
 
-Visualizza stato dopo i test:
-
+**Bash**
 ```bash
 curl http://localhost:8080/products/1
-# O via GraphQL: vedi price, stock, lowStock aggiornati
 ```
+**PowerShell**
+```powershell
+Invoke-RestMethod http://localhost:8080/products/1
+```
+Verifica via GraphQL (Playground) che prezzi e stock cambino, oppure lascia aperto `wscat` per la ricezione real-time.
 
 ---
 
 ## Autenticazione JWT (opzionale)
 
-### Abilitazione JWT e generazione token
+### Abilitazione e avvio
 
-1. Crea `.env`:
-   ```env
+1. `.env`:
+   ```
    JWT_SECRET=demo-secret
    ```
-2. Riavvia:
+2. Restart:
+
+   **Bash/PowerShell**
    ```bash
    docker compose down -v
    docker compose build
    docker compose up -d
    ```
-3. Genera token (Node.js):
-   ```bash
-   node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'demo-secret'));"
-   ```
-   (Valido 1 ora)
 
-### Utilizzo token
+### Generazione token
 
-REST:
+**Node.js**
 ```bash
-curl -H "Authorization: Bearer <jwt>" http://localhost:8080/products
+# Bash
+jwt=$(node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'demo-secret'));")
+# PowerShell
+$jwt = node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'demo-secret'));"
 ```
-GraphQL: inserisci header nel playground:
+**Python**
+```bash
+# Bash
+jwt=$(docker compose exec api-rest python -c "import jwt,time; print(jwt.encode({'sub':'user1','role':'admin','exp':int(time.time())+3600}, 'demo-secret', algorithm='HS256'))")
+# PowerShell
+$jwt = docker compose exec api-rest python -c "import jwt,time; print(jwt.encode({'sub':'user1','role':'admin','exp':int(time.time())+3600}, 'demo-secret', algorithm='HS256'))"
+```
+
+### Uso token
+
+**Bash**
+```bash
+curl -H "Authorization: Bearer $jwt" http://localhost:8080/products
+```
+**PowerShell**
+```powershell
+Invoke-RestMethod http://localhost:8080/products -Headers @{"Authorization"="Bearer $jwt"}
+```
+
+**GraphQL**: inserisci nel playground HTTP HEADERS
 ```json
 { "Authorization": "Bearer <jwt>" }
 ```
-WebSocket:
+
+**WebSocket**:
 ```bash
-wscat -c "ws://localhost:7070/ws?token=<jwt>"
+wscat -c "ws://localhost:7070/ws?token=$jwt"
 ```
 
-### Ruoli e policy
+---
 
-- **admin**: full access (GET, PATCH, POST)
-- **viewer**: sola lettura (qualsiasi PATCH/POST = 403)
+## Osservabilità e metriche
+
+### Logging
+
+**Bash**
+```bash
+docker compose logs -f api-rest
+```
+**PowerShell**
+```powershell
+docker compose logs -f api-rest
+```
+Per trace custom:
+```bash
+curl -H "X-Trace-ID: test-123" http://localhost:8080/products/1
+# PowerShell:
+Invoke-RestMethod http://localhost:8080/products/1 -Headers @{"X-Trace-ID" = "test-123"}
+docker compose logs api-rest --tail=5 | grep test-123
+# PowerShell:
+docker compose logs api-rest --tail=5 | Select-String test-123
+```
+
+### Metriche Prometheus
+
+**Bash**
+```bash
+curl http://localhost:8080/metrics | grep api_rest_requests_total
+```
+**PowerShell**
+```powershell
+Invoke-RestMethod http://localhost:8080/metrics | Select-String api_rest_requests_total
+```
+
+### Healthcheck
+
+**Bash**
+```bash
+curl http://localhost:8080/health
+```
+**PowerShell**
+```powershell
+Invoke-RestMethod http://localhost:8080/health
+```
 
 ---
 
-## Osservabilità
+## Load test & Benchmark (Artillery)
 
-- **Logging JSON**:  
-  Tutti i servizi loggano in JSON strutturato con request/trace_id.
-- **Logs**:
-  ```bash
-  docker compose logs -f api-rest
-  docker compose logs -f ws-events
-  ```
-- **Metriche Prometheus**:
-  - http://localhost:8080/metrics  (REST)
-  - http://localhost:9090/metrics  (GraphQL)
-- **Health Check**:
-  ```bash
-  curl http://localhost:8080/health
-  # {"status":"healthy","redis":"connected"}
-  ```
-
----
-
-## Load Testing con Artillery
-
-Per test riproducibili sono forniti file YAML già configurati in `misurazioni/`.
-
-**Test REST (PATCH sconto)**  
+### REST PATCH  
+**Bash & PowerShell**
 ```bash
 artillery run misurazioni/artillery-discount-rest.yml
 ```
-
-**Test MCP (JSON-RPC, batch sconto MCP-host):**  
+### MCP batch  
+**Bash & PowerShell**
 ```bash
 artillery run misurazioni/artillery-discount-mcp.yaml
 ```
 
-**Test GraphQL:**  
+### GraphQL
 ```bash
 artillery run misurazioni/artillery-test-graphql.yml
 ```
 
-**Test WebSocket (messaggi):**  
+### WebSocket
 ```bash
 artillery run misurazioni/artillery-test-ws.yml
 ```
 
-### Risultati test presenti
-
-- I risultati ufficiali delle run sono consultabili nei file:
-  - `misurazioni/report-mcp.json` (MCP discount batch)
-  - `misurazioni/report-rest.json` (REST sconto batch)
-- Estratto analytics da questi file:
-  - REST PATCH: 222 su 300 richieste PATCH applicate (resto 422, es. già scontato)
-  - MCP: 243 su 300 richieste PATCH batch batch applicate; meno errori, nessun vusers.failed
-  - Latenza media: 5.1ms (entrambi), percentile 99: 7ms
-  - Nessun VU fallito in nessun test
-  - REST usa leggermente più banda totale
-
-### Benchmark & Confronto MCP/REST
+### Risultati (già presenti, estratti da report-mcp.json e report-rest.json):
 
 | Metrica         | REST         | MCP          |
 |-----------------|--------------|--------------|
 | Latenza media   | 5.1 ms       | 5.1 ms       |
 | P99             | 7 ms         | 7 ms         |
-| Successo PATCH  | 222/300      | 243/300      |
+| Successi PATCH  | 222/300      | 243/300      |
 | Errori 422      | 78           | 57           |
 | Throughput      | 5 req/sec    | 5 req/sec    |
 | VU failed       | 0            | 0            |
 
-**Conclusione**:  
-Entrambi i paradigmi sono equivalenti per performance, MCP riduce richieste inutili e bandiera errori inferiori in batch, la differenza è architetturale non prestazionale.
-
 ---
 
-## Test avanzati
+## Sezione test
 
 ### Test sicurezza
 
-#### Test JWT
+#### Rate limiting
 
-1. JWT non impostato: tutte le API pubbliche.
-2. JWT settato: PATCH/POST solo per admin; viewer = 403.
-   ```bash
-   curl -H "Authorization: Bearer <jwt_admin>" -X PATCH ...
-   # 200 OK
-   curl -H "Authorization: Bearer <jwt_viewer>" -X PATCH ...
-   # 403 Forbidden
+1. In `.env`:
    ```
+   RATE_LIMIT=5/minute
+   ```
+2. Restart `api-rest`.
 
-#### Test Rate Limiting
-
-Imposta `RATE_LIMIT="5/minute"` in `.env` e testa:
-
+**Bash**
 ```bash
 for i in {1..10}; do curl http://localhost:8080/products; sleep 1; done
-# Atteso: 200 x 5 poi 429
+```
+**PowerShell**
+```powershell
+1..10 | % { Invoke-RestMethod http://localhost:8080/products; Start-Sleep -Seconds 1 }
 ```
 
-#### Test GraphQL Depth Limiting
+#### Depth limiting GraphQL
 
-Con:
-```env
+`.env`:
+```
 GRAPHQL_DEPTH_LIMIT=7
 ```
-Prova una query >7 livelli:  
+
+Test query >7 livelli:  
 ```bash
-curl -X POST http://localhost:4000/graphql -H "Content-Type: application/json" -d '{"query":"{ products { recommendations { recommendations { recommendations { recommendations { recommendations { id } } } } } } }"}'
-# Atteso: 400 Bad Request "exceeds maximum operation depth"
+curl -X POST http://localhost:4000/graphql \
+ -H "Content-Type: application/json" \
+ -d '{"query":"{ products { recommendations { recommendations { ... } } } }"}'
 ```
+*(PowerShell: usa Invoke-WebRequest con lo stesso payload)*
 
-#### Test Allowed Origins e payload WebSocket
+#### Allowed Origins/Payload WS
 
-Imposta in `.env`:
+`.env`:
 ```
 WS_ALLOWED_ORIGINS=http://localhost:3000
 ```
-Prova connessione con wscat:
+**Bash/PowerShell**
 ```bash
-wscat -c ws://localhost:7070/ws -H "Origin: http://notallowed.com" # rifiutata
-wscat -c ws://localhost:7070/ws -H "Origin: http://localhost:3000" # ok
+wscat -c ws://localhost:7070/ws -H "Origin: http://badorigin.com"   # bloccata
+wscat -c ws://localhost:7070/ws -H "Origin: http://localhost:3000"  # ok
 ```
 
 ---
 
-## Test osservabilità
+## Script e utility
 
-- Verifica log JSON e tracciamento:
-  ```bash
-  curl -H "X-Trace-ID: test-xxx" http://localhost:8080/products/1
-  docker compose logs api-rest --tail=5 | grep test-xxx
-  ```
-- Health check: vedere stato e connessioni redis.
+- **Reset rapido prodotti:**
 
----
-
-## Script utility
-
-- **Reset prodotti:**
+  **Bash**
   ```bash
   curl -X POST http://localhost:8080/reset
   ```
-- **ws-events consumer:**
+  **PowerShell**
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:8080/reset" -Method Post
+  ```
+
+- **ws-events consumer:**  
   ```bash
   node scripts/ws-events-consumer.js
   ```
-- **Report latency WebSocket:**
+- **WS latency report:**  
   ```bash
   node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
   ```
 
 ---
 
-## Variabili d'ambiente
+## Variabili d’ambiente
 
-| Variabile         | Default            | Descrizione                                        |
-|-------------------|-------------------|----------------------------------------------------|
-| `REDIS_URL`       | redis://redis:6379/0 | Redis per eventi                                   |
-| `REST_BASE_URL`   | http://api-rest:8080 | URL REST per MCP                                   |
-| `JWT_SECRET`      | *(vuoto)*         | Segreto JWT (abilita autenticazione)               |
-| `RATE_LIMIT`      | 100/minute        | Limite rate REST                                   |
-| `WS_ALLOWED_ORIGINS` | *              | Origini autorizzate WS                             |
-| `WS_MAX_PAYLOAD`  | 1048576           | Massimo payload WS                                 |
-| `LOW_STOCK_THRESHOLD` | 10            | Soglia di "low stock"                              |
-| `GRAPHQL_DEPTH_LIMIT` | 10            | Profondità max query GraphQL                       |
+| Variabile             | Default                      | Descrizione                          |
+|-----------------------|-----------------------------|--------------------------------------|
+| `REST_BASE_URL`       | http://api-rest:8080        | URL REST per MCP-host/tools          |
+| `REDIS_URL`           | redis://redis:6379/0        | URL redis                            |
+| `JWT_SECRET`          | *(vuoto)*                   | Segreto JWT                          |
+| `RATE_LIMIT`          | 100/minute                  | Limite rate REST                     |
+| `WS_ALLOWED_ORIGINS`  | *                           | Origini consentite WS                |
+| `WS_MAX_PAYLOAD`      | 1048576                     | Max payload WS                       |
+| `LOW_STOCK_THRESHOLD` | 10                          | Threshold 'lowStock'                 |
+| `GRAPHQL_DEPTH_LIMIT` | 10                          | Prof max query GraphQL               |
 
 ---
 
 ## Architettura logica
 
 ```
-┌───────────┐    ┌──────────────┐   ┌─────────┐
-│  REST     │    │  GraphQL     │   │ WebSocket │
-│  :8080    │    │  :4000       │   │  :7070    │
-└────┬──────┘    └────▲─────────┘   └─────▲────┘
-     │               │                     │
-     │     pub/sub   │      eventi         │
-     └─────────┬─────┴───────────┬─────────┘
-               ▼                 ▼
-           ���─────────┐      ┌──────────────┐
-           │ Redis   │      │  mcp-host    │
-           └─────────┘      └────┬─────────┘
-                                 │
-                          ┌──────▼────┐
-                          │ MCP tool  │
-                          └───────────┘
+[REST API]      [GraphQL]       [WebSocket]
+    │               │                │
+    │─────────▲─────│────────▲───────│─────────
+    │  pubsub │     │ eventi │       │
+  ┌─▼─────────┴─────┴───────┬─▼─────┘
+  │         Redis           │
+  └─────────┬───────────────┘
+            │
+       [mcp-host]──► [MCP tool]
 ```
 
 ---
 
 ## Troubleshooting
 
-| Problema            | Causa                               | Soluzione                           |
-|---------------------|-------------------------------------|-------------------------------------|
-| 401 Unauthorized    | JWT non inviato o scorretto         | Genera token, passa in header       |
-| 403 Forbidden       | Viewer tenta PATCH/POST             | Usa token admin                     |
-| 429 Too Many Req    | Rate limit superato                 | Attendi/min, alza RATE_LIMIT        |
-| No WS events        | Redis/ws-events non up/down         | docker compose logs ws-events       |
-| MCP host exit       | One-shot ok                         | docker compose logs mcp-host        |
+| Problema               | Soluzione                                    |
+|------------------------|----------------------------------------------|
+| 401/403/429            | JWT scorretto, ruolo viewer, RATE_LIMIT      |
+| Nessun evento WS       | Controlla ws-events/redis e i log            |
+| MCP host exit subito   | Normale, one-shot: guarda docker compose logs|
+| Patch non funzionante  | Controlla JWT, ruoli e che agent sia esplicito|
+| Lentezza o errori conn.| Docker Compose la priorità: riavvia/ps/logs  |
+
+**Comandi universali:**
+```bash
+docker compose ps
+docker compose logs -f api-rest
+Invoke-RestMethod http://localhost:8080/metrics
+```
+
+---
