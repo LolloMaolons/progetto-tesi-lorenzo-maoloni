@@ -1,6 +1,4 @@
 # Architettura ibrida REST + GraphQL + WebSocket + MCP (demo tesi)  
-**README duale: Bash & PowerShell**
-
 Questa demo implementa e mostra l'integrazione di REST, GraphQL, WebSocket e MCP agent/LLM come descritto nel capitolo metodologico.  
 **Tutte le procedure, test e utility sono presentate in parallelo PowerShell & Bash**  
 (permette massima ripetibilità su qualsiasi ambiente dev/didattico).
