@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn, os, json, redis, time, logging, sys, uuid
@@ -36,8 +37,17 @@ REQUEST_COUNT = Counter("api_rest_requests_total", "Total requests", ["method", 
 REQUEST_LATENCY = Histogram("api_rest_request_duration_seconds", "Request latency", ["method", "endpoint"])
 ERROR_COUNT = Counter("api_rest_errors_total", "Total errors", ["endpoint"])
 
+
 app = FastAPI(title="API REST - Catalog/Orders/Users")
 app.state.limiter = limiter
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 class Product(BaseModel):
@@ -203,6 +213,7 @@ async def get_recommendations(request: Request, pid: int, limit: int = 3, user =
         items = (items + others)[:limit]
     return items[:limit]
 
+
 @app.patch("/products/{pid}", response_model=Product)
 @limiter.limit(RATE_LIMIT)
 async def update_product(request: Request, pid: int, stock: int | None = None, price: float | None = None, user = Depends(require_role("admin"))):
@@ -213,7 +224,6 @@ async def update_product(request: Request, pid: int, stock: int | None = None, p
         p.stock = stock
         try:
             r.publish("events", json.dumps({"type": "stock_update", "id": pid, "stock": stock}))
-            
             THRESHOLD = 25
             if stock <= THRESHOLD:
                 r.publish("product-lowstock", str(pid))
@@ -226,6 +236,43 @@ async def update_product(request: Request, pid: int, stock: int | None = None, p
         except Exception as e:
             logger.error(f"Redis publish price_update error: {e}", extra={"request_id": request_id_ctx.get()})
     return p
+
+from fastapi import Body
+
+class ProductPatch(BaseModel):
+    id: int
+    stock: Optional[int] = None
+    price: Optional[float] = None
+
+@app.patch("/products", response_model=List[Product])
+@limiter.limit(RATE_LIMIT)
+async def patch_multiple_products(
+    request: Request,
+    updates: List[ProductPatch] = Body(...),
+    user = Depends(require_role("admin"))
+):
+    updated = []
+    for upd in updates:
+        p = DB_PRODUCTS.get(upd.id)
+        if not p:
+            continue
+        if upd.stock is not None:
+            p.stock = upd.stock
+            try:
+                r.publish("events", json.dumps({"type": "stock_update", "id": upd.id, "stock": upd.stock}))
+                THRESHOLD = 25
+                if upd.stock <= THRESHOLD:
+                    r.publish("product-lowstock", str(upd.id))
+            except Exception as e:
+                logger.error(f"Redis publish stock_update error: {e}", extra={"request_id": request_id_ctx.get()})
+        if upd.price is not None:
+            p.price = upd.price
+            try:
+                r.publish("events", json.dumps({"type": "price_update", "id": upd.id, "price": upd.price}))
+            except Exception as e:
+                logger.error(f"Redis publish price_update error: {e}", extra={"request_id": request_id_ctx.get()})
+        updated.append(p)
+    return updated
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)

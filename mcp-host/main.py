@@ -28,7 +28,18 @@ BASE_PRICES = {
     20: 299.0,
 }
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+# Abilita CORS per tutte le origini e metodi
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_headers():
     jwt_secret = os.getenv("JWT_SECRET", "")
@@ -53,11 +64,16 @@ async def rpc_handler(request: Request):
             threshold = params.get("threshold", 25)
             result = get_low_stock(threshold)
         elif method == "discountProduct":
-            pid = params["productId"]
+            # Accetta sia 'id' che 'productId' come parametro
+            pid = params.get("productId") or params.get("id")
+            if pid is None:
+                raise Exception("productId mancante")
             discount = params.get("discount", 10)
             result = discount_product(pid, discount)
-        elif method == "resetProductPrice":
-            pid = params["productId"]
+        elif method == "resetProductPrice" or method == "resetProduct":
+            pid = params.get("productId") or params.get("id")
+            if pid is None:
+                raise Exception("productId mancante")
             result = reset_product_price(pid)
         elif method == "discountAllLowStock":
             discount = params.get("discount", 10)
