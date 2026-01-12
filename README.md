@@ -105,20 +105,28 @@ L’architettura è composta da microservizi che comunicano tramite REST, GraphQ
 ---
 
 
-## Test funzionali
+## Testing
 
-### 1. WebSocket
+Questa architettura supporta diversi tipi di test, tutti raccolti in questa sezione:
+
+### 1. Test funzionali (API e orchestrazione)
+
+**WebSocket**
 
 Ricevi eventi real-time (stock_update, price_update, notify_pending):
 
+**Bash**
 ```bash
 wscat -c ws://localhost:7070/ws
 ```
+**PowerShell**
+```powershell
+wscat -c ws://localhost:7070/ws
+```
 
-Lascia aperto il terminale per vedere gli eventi.
+**REST API**
 
-### 2. REST API
-
+**Bash**
 ```bash
 # Lista prodotti
 curl http://localhost:8080/products
@@ -127,8 +135,17 @@ curl http://localhost:8080/products/1
 # Aggiorna stock e prezzo
 curl -X PATCH "http://localhost:8080/products/1?stock=5&price=1200"
 ```
+**PowerShell**
+```powershell
+# Lista prodotti
+Invoke-RestMethod http://localhost:8080/products
+# Singolo prodotto
+Invoke-RestMethod http://localhost:8080/products/1
+# Aggiorna stock e prezzo
+Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=5&price=1200" -Method Patch
+```
 
-### 3. GraphQL API
+**GraphQL API**
 
 Apri `http://localhost:4000/graphql` nel browser e lancia la query:
 
@@ -155,7 +172,7 @@ query {
 }
 ```
 
-### 4. MCP (agente one-shot)
+**MCP (agente one-shot)**
 
 Esegue l'orchestrazione automatica:
 - Applica sconto del 10% ai prodotti con stock ≤ 25 (se non già scontati)
@@ -163,25 +180,45 @@ Esegue l'orchestrazione automatica:
 - Pubblica eventi `price_update` su Redis
 
 **Batch orchestration:**
+**Bash**
 ```bash
+docker compose run --rm mcp-host
+```
+**PowerShell**
+```powershell
 docker compose run --rm mcp-host
 ```
 
 **Funzioni MCP tool (JSON-RPC):**
 
 - Sconto su tutti i prodotti low stock:
+  **Bash**
   ```bash
   curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
   ```
+  **PowerShell**
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:5000/rpc" -Method Post -ContentType "application/json" -Body '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
+  ```
 - Ripristino prezzo solo dei prodotti high stock:
+  **Bash**
   ```bash
   curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","id":1,"method":"resetAllHighStock","params":{"threshold":15}}'
   ```
+  **PowerShell**
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:5000/rpc" -Method Post -ContentType "application/json" -Body '{"jsonrpc":"2.0","id":1,"method":"resetAllHighStock","params":{"threshold":15}}'
+  ```
 - Reset stock e prezzo a tutti i prodotti:
+  **Bash**
   ```bash
   curl -X POST http://localhost:8080/reset
+  ```
+  **PowerShell**
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:8080/reset" -Method Post
   ```
 
 ---
@@ -203,88 +240,129 @@ Apri il browser su `http://localhost:5173`
 
 ---
 
-## Testing
+### 2. Test metriche server (Prometheus)
 
-Questa architettura supporta diversi tipi di test:
+Ogni servizio espone `/metrics` (Prometheus):
 
-### 1. Test lato server con metriche Prometheus
-- Ogni servizio espone `/metrics` (Prometheus):
-  ```bash
-  curl http://localhost:8080/metrics | grep api_rest_requests_total
-  curl http://localhost:9090/metrics | grep graphql_requests_total
-  ```
-- Analizza richieste totali, latenza, errori, breakdown per endpoint/metodo.
-
-### 2. Test con script e CLI
-- Script per simulare carico, orchestrazione batch, consumer eventi WebSocket:
-  ```bash
-  node scripts/ws-events-consumer.js
-  node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
-  powershell -File misurazioni/polling-rest.ps1
-  ```
-
-### 3. Test lato client (misurazioni)
-- Confronto tempi di risposta, payload e round-trip tramite dashboard o script:
-  - REST vs GraphQL (viste semplici e composte)
-  - WebSocket vs Polling REST
-  - MCP batch vs PATCH REST batch
-
-### 4. Test con Artillery (load testing)
-- Esegui:
-  ```bash
-  artillery run artillery-test-rest.yml
-  artillery run artillery-test-graphql.yml
-  artillery run artillery-test-ws.yml
-  artillery run artillery-discount-mcp.yml
-  artillery run artillery-discount-rest.yml
-  ```
-- Analizza i report generati in `misurazioni/`.
-
-### 5. Test di sicurezza
-- **Rate limiting:**
-  ```bash
-  export RATE_LIMIT="5/minute"
-  docker compose up -d api-rest
-  for i in {1..10}; do curl -w "\nStatus: %{http_code}\n" http://localhost:8080/products; sleep 1; done
-  # Atteso: 200 x 5, poi 429
-  ```
-- **Depth limiting GraphQL:**
-  ```bash
-  curl -X POST http://localhost:4000/graphql \
-    -H "Content-Type: application/json" \
-    -d '{"query":"{ products { recommendations { recommendations { recommendations { recommendations { recommendations { recommendations { recommendations { id } } } } } } } } }"}'
-  # Atteso: HTTP 400 Bad Request
-  ```
-- **Origin check WebSocket:**
-  ```bash
-  export WS_ALLOWED_ORIGINS="http://localhost:3000"
-  docker compose up -d ws-events
-  wscat -c ws://localhost:7070/ws -H "Origin: http://badorigin.com"  # rifiutato
-  wscat -c ws://localhost:7070/ws -H "Origin: http://localhost:3000"  # ok
-  ```
-
----
-
-
-
-### 5. Verifica effetti
-
-**REST**:
-
+**Bash**
 ```bash
-# Visualizza un prodotto
-curl http://localhost:8080/products/1
+curl http://localhost:8080/metrics | grep api_rest_requests_total
+curl http://localhost:9090/metrics | grep graphql_requests_total
 ```
 **PowerShell**
 ```powershell
-Invoke-RestMethod http://localhost:8080/products/1
+Invoke-RestMethod http://localhost:8080/metrics | Select-String api_rest_requests_total
+Invoke-RestMethod http://localhost:9090/metrics | Select-String graphql_requests_total
 ```
 
-**GraphQL**: rilancia la query nel Playground → `price` e `lowStock` aggiornati.
+Analizza richieste totali, latenza, errori, breakdown per endpoint/metodo.
 
-**WebSocket**: Gli eventi `price_update` e `stock_update` saranno visibili live nel terminale wscat.
+### 3. Test con script e CLI
+
+Script per simulare carico, orchestrazione batch, consumer eventi WebSocket:
+
+**Bash**
+```bash
+node scripts/ws-events-consumer.js
+node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
+bash misurazioni/polling-rest.sh
+```
+**PowerShell**
+```powershell
+node scripts/ws-events-consumer.js
+node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
+powershell -File misurazioni/polling-rest.ps1
+```
+
+### 4. Test lato client (misurazioni)
+
+Confronto tempi di risposta, payload e round-trip tramite dashboard o script:
+- REST vs GraphQL (viste semplici e composte)
+- WebSocket vs Polling REST
+- MCP batch vs PATCH REST batch
+
+### 5. Benchmark prestazioni
+
+**REST vs GraphQL**
+
+**Bash**
+```bash
+cd progetto-tesi-lorenzo-maoloni
+bash misurazioni/run-bench.sh
+```
+**PowerShell**
+```powershell
+cd progetto-tesi-lorenzo-maoloni
+powershell -ExecutionPolicy Bypass -File misurazioni/run-bench.ps1
+```
+
+**File input:**
+- `query/query_1.json`: query semplice (1 risorsa)
+- `query/query_2.json`: query composta (4 risorse REST vs 1 GraphQL)
+
+**Output** (in `misurazioni/`):
+- `rest_simple.txt`, `gql_simple.txt`
+- `rest_complex.txt`, `gql_complex.txt`
+
+**WebSocket vs Polling**
+
+**Bash**
+```bash
+export RUNS="20"
+export WS_URL="ws://localhost:7070/ws"
+export REST_BASE="http://localhost:8080"
+node misurazioni/ws-latency.js
+```
+**PowerShell**
+```powershell
+$env:RUNS="20"
+$env:WS_URL="ws://localhost:7070/ws"
+$env:REST_BASE="http://localhost:8080"
+node misurazioni/ws-latency.js
+```
+
+**Polling REST**
+
+**Bash**
+```bash
+bash misurazioni/polling-rest.sh
+```
+**PowerShell**
+```powershell
+powershell -File misurazioni/polling-rest.ps1
+```
+
+**Report latenza WS**
+```bash
+node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
+```
+
+### 6. Load Testing (Artillery)
+
+**Bash**
+```bash
+artillery run artillery-test-rest.yml -o misurazioni/report-rest.json
+artillery run artillery-test-graphql.yml -o misurazioni/report-graphql.json
+artillery run artillery-test-ws.yml -o misurazioni/report-ws.json
+artillery run artillery-discount-mcp.yml -o misurazioni/report-mcp.json
+artillery run artillery-discount-rest.yml -o misurazioni/report-discount-rest.json
+```
+**PowerShell**
+```powershell
+artillery run artillery-test-rest.yml -o misurazioni/report-rest.json
+artillery run artillery-test-graphql.yml -o misurazioni/report-graphql.json
+artillery run artillery-test-ws.yml -o misurazioni/report-ws.json
+artillery run artillery-discount-mcp.yml -o misurazioni/report-mcp.json
+artillery run artillery-discount-rest.yml -o misurazioni/report-discount-rest.json
+```
+
+Analizza i report generati in `misurazioni/`.
 
 ---
+
+
+
+
 
 
 
@@ -882,50 +960,7 @@ Std deviation:      1.06 ms
 
 ---
 
-## Architettura logica
 
-```
-┌──────────────────────────────────────────────────┐
-│                    Client                        │
-└────────┬─────────────┬─────────────┬─────────────┘
-         │             │             │
-         │ REST        │ GraphQL     │ WebSocket
-         ▼             ▼             ▼
-    ┌─────────┐   ┌──────────┐   ┌──────────┐
-    │api-rest │◄──│gateway-  │   │ws-events │
-    │(FastAPI)│   │graphql   │   │(Node+ws) │
-    │         │   │(Apollo)  │   │          │
-    └────┬────┘   └──────────┘   └─────▲────┘
-         │                              │
-         │ pub/sub                      │
-         ▼                              │
-    ┌─────────────────────────────────┐│
-    │          Redis                   ││
-    │        (pub/sub)                 ││
-    └────────────┬────────────────────┘│
-                 │                      │
-                 │ subscribe            │
-                 ▼                      │
-         ┌───────────────┐             │
-         │   mcp-host    │─────────────┘
-         │(orchestrator) │   publish events
-         └───┬───────┬───┘
-             │       │
-    ┌────────┴───┐ ┌┴─────────────┐
-    │mcp-server- │ │mcp-server-   │
-    │catalog     │ │orders        │
-    │(tool)      │ │(tool mock)   │
-    └────────────┘ └──────────────┘
-```
-
-**Flusso dati**:
-1. **api-rest** mantiene stato prodotti (source of truth)
-2. Modifiche pubblicate su **Redis** (`events` channel)
-3. **ws-events** inoltra eventi ai client WebSocket
-4. **gateway-graphql** compone dati REST con logica (es.  `lowStock`)
-5. **mcp-host** orchestra azioni automatiche tramite tool MCP
-
----
 
 
 
