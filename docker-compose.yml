@@ -12,7 +12,6 @@ services:
   api-rest:
     build: ./api-rest
     environment:
-      JWT_SECRET: ${JWT_SECRET}
       REDIS_URL: redis://redis:6379/0
       RATE_LIMIT: ${RATE_LIMIT:-100/minute}
     depends_on:
@@ -30,7 +29,6 @@ services:
   gateway-graphql:
     build: ./gateway-graphql
     environment:
-      JWT_SECRET: ${JWT_SECRET}
       REST_BASE_URL: http://api-rest:8080
       GRAPHQL_DEPTH_LIMIT: ${GRAPHQL_DEPTH_LIMIT:-7}
     depends_on:
@@ -43,7 +41,6 @@ services:
   ws-events:
     build: ./ws-events
     environment:
-      JWT_SECRET: ${JWT_SECRET}
       REDIS_URL: redis://redis:6379/0
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-*}
       WS_MESSAGE_RATE_LIMIT: ${WS_MESSAGE_RATE_LIMIT:-10}
@@ -81,7 +78,6 @@ services:
     stdin_open: true
     tty: true
     environment:
-      JWT_SECRET: ${JWT_SECRET}
       REST_BASE_URL: http://api-rest:8080
       REDIS_URL: redis://redis:6379/0
     depends_on:

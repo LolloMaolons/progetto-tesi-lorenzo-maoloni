@@ -1,8 +1,8 @@
 config:
-  target: "http://localhost:8080" # Cambia con la tua base URL REST
+  target: "http://localhost:8080"
   phases:
-    - duration: 60   # Testa per 60 secondi
-      arrivalRate: 5 # 5 utenti virtuali al secondo, puoi aumentare
+    - duration: 60
+      arrivalRate: 5
   payload:
     path: "products.csv"
     fields:
@@ -11,7 +11,6 @@ config:
       - newPrice
   defaults:
     headers:
-      Authorization: "Bearer {{ token }}" # Imposta se serve JWT
 scenarios:
   - name: Applica sconto a prodotto low stock
     flow:
@@ -19,4 +18,4 @@ scenarios:
           url: "/products/{{ productId }}"
           json:
             price: "{{ newPrice }}"
-      - think: 1 # Aspetta 1 secondo prima del prossimo
+      - think: 1

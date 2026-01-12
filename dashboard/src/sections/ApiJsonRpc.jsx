@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, ListItemIcon } from '@mui/material';
+import { Box, Paper, Typography, TextField, Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Tooltip } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -12,19 +12,19 @@ import { saveRequests, loadRequests } from './requestStore';
 const DEFAULTS = [
   {
     name: 'Discount prodotto id 1',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "discountProduct",\n  "params": { "id": 1, "discount": 10 }\n}',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "discountProduct",\n  "params": { "id": 1, "discount": 10, "threshold": 25}\n}',
   },
   {
     name: 'Reset prodotto id 1',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "resetProduct",\n  "params": { "id": 1 }\n}',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "resetProduct",\n  "params": { "id": 1, "threshold": 25 }\n}',
   },
   {
     name: 'Discount all low stock',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "discountAllLowStock",\n  "params": { "discount": 10, "threshold": 15 }\n}',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "discountAllLowStock",\n  "params": { "discount": 10, "threshold": 25 }\n}',
   },
   {
     name: 'Reset all high stock',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "resetAllHighStock",\n  "params": { "threshold": 15 }\n}',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "resetAllHighStock",\n  "params": { "threshold": 25 }\n}',
   },
 ];
 
@@ -77,13 +77,20 @@ export default function ApiJsonRpc() {
     setShowSave(false);
   };
 
-  // Rimuovi custom (non default)
   const handleDelete = idx => {
     if (idx < DEFAULTS.length) return;
     const newList = requests.filter((_, i) => i !== idx);
     setRequests(newList);
     saveRequests('jsonrpc-requests', newList);
     setSelected(Math.max(0, idx - 1));
+  };
+
+  const handleResetDefaults = () => {
+    setRequests(DEFAULTS);
+    saveRequests('jsonrpc-requests', DEFAULTS);
+    setSelected(0);
+    setBody(DEFAULTS[0].body);
+    setShowSave(false);
   };
 
   return (
@@ -109,6 +116,9 @@ export default function ApiJsonRpc() {
           ))}
         </List>
         <Button startIcon={<AddIcon />} onClick={handleAdd} variant="outlined" sx={{ mt: 1 }}>Nuova richiesta</Button>
+        <Button color="error" variant="outlined" sx={{ mt: 1 }} onClick={handleResetDefaults}>
+          Ripristina richieste di default
+        </Button>
       </Paper>
       <Paper elevation={2} sx={{ flex: 1, p: 3, minWidth: 0 }}>
         <Typography variant="h6" gutterBottom>JSON-RPC Tool</Typography>

@@ -33,7 +33,7 @@ const DEFAULTS = [
     name: 'Patch stock (high stock >25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products',
-    body: '[{"id":1,"stock":60},{"id":6,"stock":60},{"id":10,"stock":30}]',
+    body: '[{"id":1,"stock":60},{"id":6,"stock":70},{"id":10,"stock":45}]',
   },
   {
     name: 'Patch price (single)',

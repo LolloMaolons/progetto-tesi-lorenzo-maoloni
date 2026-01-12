@@ -2,17 +2,11 @@
 import WebSocket from 'ws';
 
 const WS_URL = process.argv[2] || process.env.WS_URL || 'ws://localhost:7070/ws';
-const TOKEN = process.env.JWT_TOKEN || '';
 
 let url = WS_URL;
-if (TOKEN) {
-  url += `?token=${TOKEN}`;
-}
 
 console.log(`Connecting to ${WS_URL}...`);
-if (TOKEN) {
-  console.log('Using JWT token for authentication');
-}
+
 
 const ws = new WebSocket(url);
 

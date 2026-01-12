@@ -1,18 +1,13 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { createClient } from 'redis';
-import jwt from 'jsonwebtoken';
 import winston from 'winston';
 import { Counter } from 'prom-client';
 import http from 'http';
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379/0";
-const JWT_SECRET = process.env.JWT_SECRET || "";
-const JWT_ALGORITHM = process.env.JWT_ALGORITHM || "HS256";
-const AUTH_ENABLED = !!JWT_SECRET;
-const MAX_PAYLOAD = parseInt(process.env.WS_MAX_PAYLOAD || "1048576", 10); // 1MB
+const MAX_PAYLOAD = parseInt(process.env.WS_MAX_PAYLOAD || "1048576", 10);
 const ALLOWED_ORIGINS = (process.env.WS_ALLOWED_ORIGINS || "*").split(",");
-const MESSAGE_RATE_LIMIT = parseInt(process.env.WS_MESSAGE_RATE_LIMIT || "10", 10); // per second
-
+const MESSAGE_RATE_LIMIT = parseInt(process.env.WS_MESSAGE_RATE_LIMIT || "10", 10);
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
@@ -50,39 +45,6 @@ const wss = new WebSocketServer({
       wsErrors.labels('origin_rejected').inc();
       cb(false, 403, 'Origin not allowed');
       return;
-    }
-
-    if (AUTH_ENABLED) {
-      const url = new URL(info.req.url, `ws://localhost:7070`);
-      const token = url.searchParams.get('token');
-      
-      if (!token) {
-        logger.warn('Connection rejected: missing token');
-        wsErrors.labels('auth_required').inc();
-        cb(false, 401, 'Authorization token required');
-        return;
-      }
-
-      try {
-        const user = jwt.verify(token, JWT_SECRET, { 
-          algorithms: [JWT_ALGORITHM],
-          clockTolerance: 5
-        });
-        
-        if (user.exp && user.exp < Math.floor(Date.now() / 1000)) {
-          logger.warn('Connection rejected: token expired');
-          wsErrors.labels('auth_expired').inc();
-          cb(false, 401, 'Token expired');
-          return;
-        }
-        
-        info.req.user = user;
-      } catch (err) {
-        logger.warn('Connection rejected: invalid token', { error: err.message });
-        wsErrors.labels('auth_failed').inc();
-        cb(false, 401, 'Invalid token');
-        return;
-      }
     }
 
     cb(true);

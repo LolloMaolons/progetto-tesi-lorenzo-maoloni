@@ -10,7 +10,7 @@ DISCOUNT_PERCENTAGE = float(os.environ.get('DISCOUNT_PERCENTAGE', '10'))
 LOW_STOCK_THRESHOLD = int(os.environ.get('LOW_STOCK_THRESHOLD', '5'))
 RESULTS_FILE = os.environ.get('RESULTS_FILE', 'results_mcp.json')
 
-headers = {"Authorization": f"Bearer {MCP_BEARER}"} if MCP_BEARER else {}
+headers = {}
 
 def main():
     payload = {

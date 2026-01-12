@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn, os, json, redis, time, logging, sys, uuid
 from contextvars import ContextVar
-import jwt
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -13,10 +12,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from pythonjsonlogger import jsonlogger
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-JWT_SECRET = os.getenv("JWT_SECRET", "")
-JWT_ALGORITHM = os. getenv("JWT_ALGORITHM", "HS256")
 RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
-AUTH_ENABLED = bool(JWT_SECRET)
 
 request_id_ctx: ContextVar[str] = ContextVar("request_id", default="")
 
@@ -82,31 +78,6 @@ BASE_PRODUCTS = {
 }
 
 DB_PRODUCTS = {k: Product(**v) for k, v in BASE_PRODUCTS.items()}
-
-def verify_token(request: Request):
-    if not AUTH_ENABLED:
-        return {"role": "admin"}
-    
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(401, "Missing or invalid authorization header")
-    
-    token = auth_header[7:]
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(401, "Invalid token")
-
-def require_role(required_role: str):
-    def _check_role(user = Depends(verify_token)):
-        role = user.get("role", "viewer")
-        if required_role == "admin" and role != "admin":
-            raise HTTPException(403, "Admin role required")
-        return user
-    return _check_role
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
@@ -177,7 +148,7 @@ async def metrics():
 
 @app.post("/reset")
 @limiter.limit(RATE_LIMIT)
-async def reset_products(request: Request, user = Depends(require_role("admin"))):
+async def reset_products(request: Request):
     global DB_PRODUCTS
     DB_PRODUCTS = {k: Product(**v) for k, v in BASE_PRODUCTS.items()}
     logger.info("All products reset to base values", extra={"request_id": request_id_ctx.get()})
@@ -185,8 +156,8 @@ async def reset_products(request: Request, user = Depends(require_role("admin"))
 
 @app.get("/products", response_model=List[Product])
 @limiter.limit(RATE_LIMIT)
-async def list_products(request: Request, limit: int | None = None, category: str | None = None, user = Depends(verify_token)):
-    items = list(DB_PRODUCTS. values())
+async def list_products(request: Request, limit: int | None = None, category: str | None = None):
+    items = list(DB_PRODUCTS.values())
     if category:
         items = [p for p in items if p.category == category]
     if limit:
@@ -195,7 +166,7 @@ async def list_products(request: Request, limit: int | None = None, category: st
 
 @app.get("/products/{pid}", response_model=Product)
 @limiter.limit(RATE_LIMIT)
-async def get_product(request: Request, pid: int, user = Depends(verify_token)):
+async def get_product(request: Request, pid: int):
     p = DB_PRODUCTS.get(pid)
     if not p:
         raise HTTPException(404, "Not found")
@@ -203,7 +174,7 @@ async def get_product(request: Request, pid: int, user = Depends(verify_token)):
 
 @app.get("/products/{pid}/recommendations", response_model=List[Product])
 @limiter.limit(RATE_LIMIT)
-async def get_recommendations(request: Request, pid: int, limit: int = 3, user = Depends(verify_token)):
+async def get_recommendations(request: Request, pid: int, limit: int = 3):
     if pid not in DB_PRODUCTS:
         raise HTTPException(404, "Not found")
     category = DB_PRODUCTS[pid].category
@@ -216,7 +187,7 @@ async def get_recommendations(request: Request, pid: int, limit: int = 3, user =
 
 @app.patch("/products/{pid}", response_model=Product)
 @limiter.limit(RATE_LIMIT)
-async def update_product(request: Request, pid: int, stock: int | None = None, price: float | None = None, user = Depends(require_role("admin"))):
+async def update_product(request: Request, pid: int, stock: int | None = None, price: float | None = None):
     p = DB_PRODUCTS.get(pid)
     if not p:
         raise HTTPException(404, "Not found")
@@ -248,8 +219,7 @@ class ProductPatch(BaseModel):
 @limiter.limit(RATE_LIMIT)
 async def patch_multiple_products(
     request: Request,
-    updates: List[ProductPatch] = Body(...),
-    user = Depends(require_role("admin"))
+    updates: List[ProductPatch] = Body(...)
 ):
     updated = []
     for upd in updates:

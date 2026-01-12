@@ -4,12 +4,11 @@ import requests
 import json
 
 API_URL = os.environ['REST_API_URL']
-JWT = os.environ.get('JWT', '')
 DISCOUNT = float(os.environ.get('DISCOUNT_PERCENTAGE', '10'))
 THRESHOLD = int(os.environ.get('LOW_STOCK_THRESHOLD', '5'))
 RESULTS = os.environ.get('RESULTS_FILE', 'results_rest.json')
 
-headers = {"Authorization": f"Bearer {JWT}"} if JWT else {}
+headers = {}
 
 def main():
     start = time.monotonic()

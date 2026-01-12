@@ -1,17 +1,13 @@
 import { ApolloServer } from 'apollo-server';
 import { gql } from 'apollo-server';
 import fetch from 'node-fetch';
-import jwt from 'jsonwebtoken';
 import depthLimit from 'graphql-depth-limit';
 import { register, Counter, Histogram } from 'prom-client';
 import winston from 'winston';
 import http from 'http';
 
-const REST_BASE = process.env.REST_BASE_URL || "http://localhost:8080";
-const LOW_STOCK_THRESHOLD = parseInt(process.env.LOW_STOCK_THRESHOLD || "10", 10);
-const JWT_SECRET = process.env.JWT_SECRET || "";
-const JWT_ALGORITHM = process.env.JWT_ALGORITHM || "HS256";
-const AUTH_ENABLED = !!JWT_SECRET;
+const REST_BASE = process.env.REST_BASE_URL || 'http://localhost:8080';
+const LOW_STOCK_THRESHOLD = parseInt(process.env.LOW_STOCK_THRESHOLD || "25", 10);
 const GRAPHQL_DEPTH_LIMIT = parseInt(process.env.GRAPHQL_DEPTH_LIMIT || "7", 10);
 const INTROSPECTION_ENABLED = process.env.INTROSPECTION_ENABLED !== "false";
 const RATE_LIMIT_PER_MIN = parseInt(process.env.RATE_LIMIT_PER_MIN || "100", 10);
@@ -76,17 +72,6 @@ function checkRateLimit(ip) {
   return true;
 }
 
-function verifyToken(token) {
-  if (!AUTH_ENABLED) {
-    return { role: 'admin' };
-  }
-  try {
-    return jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
-  } catch (err) {
-    throw new Error('Invalid or expired token');
-  }
-}
-
 const typeDefs = gql`
   type Product {
     id: ID!
@@ -112,18 +97,14 @@ const resolvers = {
   Product: {
     lowStock: (parent) => parent.stock <= LOW_STOCK_THRESHOLD,
     recommendations: async (parent, { limit }, context) => {
-      const res = await fetch(`${REST_BASE}/products/${parent.id}/recommendations?limit=${limit}`, {
-        headers: context.authHeader ? { Authorization: context.authHeader } : {},
-      });
+      const res = await fetch(`${REST_BASE}/products/${parent.id}/recommendations?limit=${limit}`);
       if (res.status !== 200) return [];
       return res.json();
     },
   },
   Query: {
     product: async (_, { id }, context) => {
-      const res = await fetch(`${REST_BASE}/products/${id}`, {
-        headers: context.authHeader ? { Authorization: context.authHeader } : {},
-      });
+      const res = await fetch(`${REST_BASE}/products/${id}`);
       if (res.status !== 200) return null;
       return res.json();
     },
@@ -131,15 +112,11 @@ const resolvers = {
       const qs = new URLSearchParams();
       if (limit) qs.append("limit", limit);
       if (category) qs.append("category", category);
-      const res = await fetch(`${REST_BASE}/products${qs.toString() ? "?" + qs.toString() : ""}`, {
-        headers: context.authHeader ? { Authorization: context.authHeader } : {},
-      });
+      const res = await fetch(`${REST_BASE}/products${qs.toString() ? "?" + qs.toString() : ""}`);
       return res.json();
     },
     recommendations: async (_, { id, limit }, context) => {
-      const res = await fetch(`${REST_BASE}/products/${id}/recommendations?limit=${limit}`, {
-        headers: context.authHeader ? { Authorization: context.authHeader } : {},
-      });
+      const res = await fetch(`${REST_BASE}/products/${id}/recommendations?limit=${limit}`);
       if (res.status !== 200) return [];
       return res.json();
     },
@@ -160,14 +137,6 @@ const server = new ApolloServer({
       throw new Error('Rate limit exceeded');
     }
 
-    const authHeader = req.headers.authorization || '';
-    let user = { role: 'viewer' };
-    if (authHeader.startsWith('Bearer ')) {
-      const token = authHeader.slice(7);
-      user = verifyToken(token);
-    } else if (AUTH_ENABLED && !authHeader) {
-      throw new Error('Authorization required');
-    }
 
     logger.info('GraphQL request', {
       requestId,
@@ -177,8 +146,6 @@ const server = new ApolloServer({
     });
 
     return {
-      user,
-      authHeader,
       requestId,
       traceId,
     };

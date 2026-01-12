@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, ListItemIcon } from '@mui/material';
+import { Box, Paper, Typography, TextField, Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Tooltip } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -125,13 +125,20 @@ export default function ApiGraphQL() {
     setShowSave(false);
   };
 
-  // Rimuovi custom (non default)
   const handleDelete = idx => {
     if (idx < DEFAULTS.length) return;
     const newList = queries.filter((_, i) => i !== idx);
     setQueries(newList);
     saveRequests('graphql-queries', newList);
     setSelected(Math.max(0, idx - 1));
+  };
+
+  const handleResetDefaults = () => {
+    setQueries(DEFAULTS);
+    saveRequests('graphql-queries', DEFAULTS);
+    setSelected(0);
+    setQuery(DEFAULTS[0].query);
+    setShowSave(false);
   };
 
   return (
@@ -157,6 +164,9 @@ export default function ApiGraphQL() {
           ))}
         </List>
         <Button startIcon={<AddIcon />} onClick={handleAdd} variant="outlined" sx={{ mt: 1 }}>Nuova query</Button>
+        <Button color="error" variant="outlined" sx={{ mt: 1 }} onClick={handleResetDefaults}>
+          Ripristina queries di default
+        </Button>
       </Paper>
       <Paper elevation={2} sx={{ flex: 1, p: 3, minWidth: 0 }}>
         <Typography variant="h6" gutterBottom>GraphQL API Tester</Typography>

@@ -6,7 +6,6 @@
     "apollo-server": "^3.13.0",
     "graphql": "^16.8.1",
     "node-fetch": "^3.3.2",
-    "jsonwebtoken": "^9.0.2",
     "@escape.tech/graphql-armor": "^2.3.0",
     "prom-client": "^15.1.0",
     "winston": "^3.11.0",
