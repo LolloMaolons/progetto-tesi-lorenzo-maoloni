@@ -1,39 +1,41 @@
+
 # Architettura ibrida REST + GraphQL + WebSocket + MCP (demo tesi)
 
-Questa demo mostra come integrare i quattro paradigmi descritti nel Capitolo 1: 
-- **REST** per CRUD e stato autorevole
-- **GraphQL** per viste client-driven e riduzione di over/under-fetching
-- **WebSocket** per notifiche real-time
-- **MCP** per orchestrare un agente (LLM host) che legge dati freschi ed esegue azioni tramite tool dichiarativi
+Questa demo mostra come integrare e confrontare i quattro principali paradigmi di comunicazione moderni:
+- **REST**: per operazioni CRUD e gestione dello stato autorevole dei dati
+- **GraphQL**: per viste client-driven e riduzione di over/under-fetching
+- **WebSocket**: per notifiche real-time e comunicazione bidirezionale
+- **MCP**: per orchestrare un agente (LLM host) che legge dati freschi ed esegue azioni tramite tool dichiarativi
+
+L’obiettivo è fornire un’architettura di riferimento, facilmente testabile e osservabile, per confrontare prestazioni, flessibilità e limiti di ciascun modello, sia lato server che lato client.
+
 
 ## Indice
 
 - [Prerequisiti](#prerequisiti)
 - [Avvio rapido](#avvio-rapido)
 - [Servizi inclusi](#servizi-inclusi)
+- [Funzionamento dettagliato](#funzionamento-dettagliato)
 - [Test funzionali](#test-funzionali)
-- [Autenticazione JWT](#autenticazione-jwt)
-- [Osservabilità](#osservabilità)
-- [Sicurezza e Test](#sicurezza-e-test)
-- [Test osservabilità](#test-osservabilità)
-- [Benchmark prestazioni](#benchmark-prestazioni)
-- [Load Testing](#load-testing)
+- [Dashboard frontend](#dashboard-frontend)
+- [Testing](#testing)
+- [Osservabilità e metriche](#osservabilita-e-metriche)
+- [Sicurezza](#sicurezza)
 - [Script e utility](#script-e-utility)
 - [Variabili d'ambiente](#variabili-dambiente)
 - [Architettura logica](#architettura-logica)
-- [Troubleshooting](#troubleshooting)
+- [Problemi comuni](#problemi-comuni)
+- [Comandi diagnostici](#comandi-diagnostici)
 
 ---
 
 ## Prerequisiti
 
 - **Docker** e **Docker Compose**
-- **Node.js** (per wscat, artillery)
+- **Node.js** (per wscat, artillery, dashboard)
 - **Python 3.11+** (opzionale: test locali, MCP host)
-- **Artillery**:
-  - Bash/PowerShell: `npm install -g artillery`
-- **wscat**:
-  - Bash/PowerShell: `npm install -g wscat`
+- **Artillery**: `npm install -g artillery`
+- **wscat**: `npm install -g wscat`
 ---
 
 ## Preparazione ambiente
@@ -51,11 +53,10 @@ git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
 cd progetto-tesi-lorenzo-maoloni
 ```
 
+
 ## Avvio rapido
 
-### Modalità senza autenticazione (default)
-
-> **I seguenti comandi sono identici per bash e PowerShell**
+Esegui questi comandi (identici per Bash e PowerShell):
 
 ```bash
 docker compose down -v
@@ -63,120 +64,61 @@ docker compose build
 docker compose up -d
 ```
 
-**Verifica**:  
+**Verifica servizi:**
 
-**Bash**
 ```bash
 docker compose ps
 curl http://localhost:8080/products
 wscat -c ws://localhost:7070/ws
 ```
-**PowerShell**
-```powershell
-docker compose ps
-Invoke-RestMethod http://localhost:8080/products
-wscat -c ws://localhost:7070/ws
-```
 
-Apri browser:  `http://localhost:4000/graphql` per GraphQL Playground.
+Apri nel browser:
+- `http://localhost:4000/graphql` per GraphQL Playground
+- `http://localhost:5173` per la dashboard frontend (vedi sezione dedicata)
 
-### Modalità con autenticazione JWT
-
-1. **Crea/modifica `.env`**:
-
-   ```env
-   JWT_SECRET=gino
-   ```
-
-2. **Riavvia i servizi**
-
-   > **Comandi identici per bash e PowerShell**
-
-   ```bash
-   docker compose down -v
-   docker compose build
-   docker compose up -d
-   ```
-
-3. **Genera un token JWT**
-
-   **Node.js**  
-
-   **Bash**
-   ```bash
-   jwt=$(node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));")
-   ```
-   **PowerShell**
-   ```powershell
-   $jwt = node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));"
-   ```
-
-   **Alternativa con Python dal container**
-
-   **Bash**
-   ```bash
-   jwt=$(docker compose exec api-rest python -c "import jwt,time; print(jwt.encode({'sub':'user1','role':'admin','exp':int(time.time())+3600}, 'gino', algorithm='HS256'))")
-   ```
-   **PowerShell**
-   ```powershell
-   $jwt = docker compose exec api-rest python -c "import jwt,time; print(jwt.encode({'sub':'user1','role':'admin','exp':int(time.time())+3600}, 'gino', algorithm='HS256'))"
-   ```
-
-4. **Usa il token**
-
-   **Bash**
-   ```bash
-   curl -H "Authorization: Bearer $jwt" http://localhost:8080/products
-   ```
-   **PowerShell**
-   ```powershell
-   Invoke-RestMethod http://localhost:8080/products -Headers @{"Authorization"="Bearer $jwt"}
-   ```
-
----
 
 ## Servizi inclusi
 
-| Servizio | Tecnologia | Descrizione |
-|----------|-----------|-------------|
-| **redis** | Redis 7 | Pub/sub per eventi real-time |
-| **api-rest** | FastAPI | API REST, stato prodotti (in-memory o Postgres), pubblica eventi |
-| **gateway-graphql** | Apollo Server | API GraphQL, compone dati REST, calcola `lowStock` |
-| **ws-events** | Node.js + ws | Server WebSocket, inoltra eventi da Redis |
-| **mcp-server-catalog** | Python MCP | Server MCP con tool `searchLowStock`, `applyDiscount` |
-| **mcp-server-orders** | Python MCP | Server MCP con tool `notifyPending` (mock) |
-| **mcp-host** | Python | Orchestratore MCP (one-shot): applica sconti automatici |
+| Servizio              | Tecnologia         | Descrizione                                                                 |
+|-----------------------|-------------------|----------------------------------------------------------------------------|
+| **redis**             | Redis 7           | Pub/sub per eventi real-time                                                |
+| **api-rest**          | FastAPI           | API REST, stato prodotti (in-memory o Postgres), pubblica eventi            |
+| **gateway-graphql**   | Apollo Server     | API GraphQL, compone dati REST, calcola `lowStock`                          |
+| **ws-events**         | Node.js + ws      | Server WebSocket, inoltra eventi da Redis                                   |
+| **mcp-server-catalog**| Python MCP        | Server MCP con tool `searchLowStock`, `applyDiscount`                       |
+| **mcp-server-orders** | Python MCP        | Server MCP con tool `notifyPending` (mock)                                  |
+| **mcp-host**          | Python            | Orchestratore MCP (one-shot): applica sconti automatici                     |
+| **dashboard**         | React + Vite      | Frontend per test funzionali e visualizzazione dati                         |
 
 > **Nota**: di default il database è in-memory.
+## Funzionamento dettagliato
+
+L’architettura è composta da microservizi che comunicano tramite REST, GraphQL, WebSocket e MCP. Tutti i servizi sono containerizzati e orchestrati tramite Docker Compose. Le modifiche ai dati (prodotti) vengono propagate in tempo reale tramite eventi Redis e WebSocket. La dashboard frontend consente di testare e confrontare i paradigmi direttamente da interfaccia grafica, mentre tutti i servizi espongono endpoint per test funzionali e raccolta metriche.
+
+**Flusso dati tipico:**
+1. Il client (dashboard o CLI) effettua richieste REST, GraphQL o WebSocket.
+2. Le modifiche ai prodotti sono gestite da api-rest e propagate tramite Redis.
+3. ws-events inoltra gli eventi ai client WebSocket.
+4. gateway-graphql compone dati REST e logica custom.
+5. mcp-host e i server MCP orchestrano azioni batch e tool automatici.
 
 ---
+
 
 ## Test funzionali
 
 ### 1. WebSocket
 
-Ricevi eventi real-time (stock_update, price_update, notify_pending).
+Ricevi eventi real-time (stock_update, price_update, notify_pending):
 
-> **I seguenti comandi sono identici per bash e PowerShell**
-
-**Senza JWT**:
 ```bash
 wscat -c ws://localhost:7070/ws
-```
-
-**Con JWT**:
-```bash
-jwt="<il-tuo-token>"
-wscat -c "ws://localhost:7070/ws?token=$jwt"
 ```
 
 Lascia aperto il terminale per vedere gli eventi.
 
 ### 2. REST API
 
-**Senza JWT**:
-
-**Bash**
 ```bash
 # Lista prodotti
 curl http://localhost:8080/products
@@ -185,48 +127,12 @@ curl http://localhost:8080/products/1
 # Aggiorna stock e prezzo
 curl -X PATCH "http://localhost:8080/products/1?stock=5&price=1200"
 ```
-**PowerShell**
-```powershell
-# Lista prodotti
-Invoke-RestMethod http://localhost:8080/products
-# Singolo prodotto
-Invoke-RestMethod http://localhost:8080/products/1
-# Aggiorna stock e prezzo
-Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=5&price=1200" -Method Patch
-```
-
-**Con JWT**:
-
-**Bash**
-```bash
-jwt="<il-tuo-token>"
-curl -H "Authorization: Bearer $jwt" http://localhost:8080/products
-curl -H "Authorization: Bearer $jwt" http://localhost:8080/products/1
-curl -X PATCH -H "Authorization: Bearer $jwt" "http://localhost:8080/products/1?stock=5&price=1200"
-```
-**PowerShell**
-```powershell
-$jwt="<il-tuo-token>"
-Invoke-RestMethod http://localhost:8080/products -Headers @{"Authorization"="Bearer $jwt"}
-Invoke-RestMethod http://localhost:8080/products/1 -Headers @{"Authorization"="Bearer $jwt"}
-Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=5&price=1200" -Headers @{"Authorization"="Bearer $jwt"} -Method Patch
-```
 
 ### 3. GraphQL API
 
-Apri `http://localhost:4000/graphql` nel browser.
+Apri `http://localhost:4000/graphql` nel browser e lancia la query:
 
-**Senza JWT**:  lancia direttamente la query. 
-
-**Con JWT**: aggiungi header nella sezione **HTTP HEADERS** (in fondo al Playground):
-
-```json
-{
-  "Authorization": "Bearer <il-tuo-token>"
-}
-```
-
-**Query di esempio**:
+```graphql
 query {
   product(id: 1) {
     id
@@ -247,6 +153,7 @@ query {
     description
   }
 }
+```
 
 ### 4. MCP (agente one-shot)
 
@@ -255,49 +162,106 @@ Esegue l'orchestrazione automatica:
 - Ripristina prezzo base se stock > 25
 - Pubblica eventi `price_update` su Redis
 
-- **Batch orchestration**  
-  *(Comando identico per Bash e PowerShell)*  
+**Batch orchestration:**
+```bash
+docker compose run --rm mcp-host
+```
+
+**Funzioni MCP tool (JSON-RPC):**
+
+- Sconto su tutti i prodotti low stock:
   ```bash
-  docker compose run --rm mcp-host
+  curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
+  ```
+- Ripristino prezzo solo dei prodotti high stock:
+  ```bash
+  curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","id":1,"method":"resetAllHighStock","params":{"threshold":15}}'
+  ```
+- Reset stock e prezzo a tutti i prodotti:
+  ```bash
+  curl -X POST http://localhost:8080/reset
   ```
 
-- **Funzioni MCP tool (JSON-RPC):**
+---
 
-  - **Sconto su tutti i prodotti low stock:**
-    - **Bash**
-      ```bash
-      curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
-        -d '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
-      ```
-    - **PowerShell**
-      ```powershell
-      Invoke-WebRequest -Uri http://localhost:5000/rpc -Method POST `
-        -Headers @{ "Content-Type" = "application/json" } `
-        -Body '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
-      ```
+## Dashboard frontend
 
-  - **Ripristino prezzo solo dei prodotti high stock:**
-    - **Bash**
-      ```bash
-      curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
-        -d '{"jsonrpc":"2.0","id":1,"method":"resetAllHighStock","params":{"threshold":15}}'
-      ```
-    - **PowerShell**
-      ```powershell
-      Invoke-WebRequest -Uri http://localhost:5000/rpc -Method POST `
-        -Headers @{ "Content-Type" = "application/json" } `
-        -Body '{"jsonrpc":"2.0","id":1,"method":"resetAllHighStock","params":{"threshold":15}}'
-      ```
+La dashboard (cartella `dashboard/`) è un frontend React che permette di:
+- Testare tutte le API (REST, GraphQL, WebSocket, MCP) da interfaccia grafica
+- Visualizzare risposte, metriche e confronti tra paradigmi
+- Salvare e ripetere richieste di test
 
-  - **Reset stock e prezzo a tutti i prodotti:**
-    - **Bash**
-      ```bash
-      curl -X POST http://localhost:8080/reset
-      ```
-    - **PowerShell**
-      ```powershell
-      Invoke-RestMethod -Uri "http://localhost:8080/reset" -Method POST
-      ```
+**Avvio dashboard:**
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+Apri il browser su `http://localhost:5173`
+
+---
+
+## Testing
+
+Questa architettura supporta diversi tipi di test:
+
+### 1. Test lato server con metriche Prometheus
+- Ogni servizio espone `/metrics` (Prometheus):
+  ```bash
+  curl http://localhost:8080/metrics | grep api_rest_requests_total
+  curl http://localhost:9090/metrics | grep graphql_requests_total
+  ```
+- Analizza richieste totali, latenza, errori, breakdown per endpoint/metodo.
+
+### 2. Test con script e CLI
+- Script per simulare carico, orchestrazione batch, consumer eventi WebSocket:
+  ```bash
+  node scripts/ws-events-consumer.js
+  node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
+  powershell -File misurazioni/polling-rest.ps1
+  ```
+
+### 3. Test lato client (misurazioni)
+- Confronto tempi di risposta, payload e round-trip tramite dashboard o script:
+  - REST vs GraphQL (viste semplici e composte)
+  - WebSocket vs Polling REST
+  - MCP batch vs PATCH REST batch
+
+### 4. Test con Artillery (load testing)
+- Esegui:
+  ```bash
+  artillery run artillery-test-rest.yml
+  artillery run artillery-test-graphql.yml
+  artillery run artillery-test-ws.yml
+  artillery run artillery-discount-mcp.yml
+  artillery run artillery-discount-rest.yml
+  ```
+- Analizza i report generati in `misurazioni/`.
+
+### 5. Test di sicurezza
+- **Rate limiting:**
+  ```bash
+  export RATE_LIMIT="5/minute"
+  docker compose up -d api-rest
+  for i in {1..10}; do curl -w "\nStatus: %{http_code}\n" http://localhost:8080/products; sleep 1; done
+  # Atteso: 200 x 5, poi 429
+  ```
+- **Depth limiting GraphQL:**
+  ```bash
+  curl -X POST http://localhost:4000/graphql \
+    -H "Content-Type: application/json" \
+    -d '{"query":"{ products { recommendations { recommendations { recommendations { recommendations { recommendations { recommendations { recommendations { id } } } } } } } } }"}'
+  # Atteso: HTTP 400 Bad Request
+  ```
+- **Origin check WebSocket:**
+  ```bash
+  export WS_ALLOWED_ORIGINS="http://localhost:3000"
+  docker compose up -d ws-events
+  wscat -c ws://localhost:7070/ws -H "Origin: http://badorigin.com"  # rifiutato
+  wscat -c ws://localhost:7070/ws -H "Origin: http://localhost:3000"  # ok
+  ```
 
 ---
 
@@ -307,171 +271,39 @@ Esegue l'orchestrazione automatica:
 
 **REST**:
 
-**Bash**
 ```bash
-# Senza JWT
+# Visualizza un prodotto
 curl http://localhost:8080/products/1
-# Con JWT
-jwt="<il-tuo-token>"
-curl -H "Authorization: Bearer $jwt" http://localhost:8080/products/1
 ```
 **PowerShell**
 ```powershell
-# Senza JWT
 Invoke-RestMethod http://localhost:8080/products/1
-# Con JWT
-$jwt="<il-tuo-token>"
-Invoke-RestMethod http://localhost:8080/products/1 -Headers @{"Authorization"="Bearer $jwt"}
 ```
 
-**GraphQL**:  rilancia la query nel Playground → `price` e `lowStock` aggiornati.
+**GraphQL**: rilancia la query nel Playground → `price` e `lowStock` aggiornati.
 
 **WebSocket**: Gli eventi `price_update` e `stock_update` saranno visibili live nel terminale wscat.
 
 ---
 
-## Autenticazione JWT
 
-### Panoramica
 
-L'autenticazione JWT è **opzionale** e **disabilitata di default**. Quando abilitata: 
-- **REST**: richiede header `Authorization: Bearer <token>`
-- **GraphQL**: richiede header `Authorization: Bearer <token>`
-- **WebSocket**: richiede query param `?token=<token>`
+## Osservabilità e metriche
 
-### Ruoli disponibili
-
-| Ruolo   | Permessi                                  |
-|---------|-------------------------------------------|
-| `admin` | Lettura + scrittura (GET, PATCH, POST)    |
-| `viewer`| Solo lettura (GET); PATCH/POST → 403      |
-
-### Abilitazione
-
-1. **Configura `.env`**:
-   ```env
-   JWT_SECRET=gino
-   JWT_ALGORITHM=HS256
-   ```
-
-2. **Ricrea i container**
-
-   > **I seguenti comandi sono identici per bash e PowerShell**
-   ```bash
-   docker compose down -v
-   docker compose up -d --build --force-recreate
-   ```
-
-### Generazione token
-
-**Con Node.js**
-
-> **Stesso comando, cambiano solo $jwt/jwt= variabile**
-
-**Bash**
-```bash
-jwt=$(node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));")
-jwt=$(node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user2',role:'viewer',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));")
-```
-**PowerShell**
-```powershell
-$jwt = node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user1',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));"
-$jwt = node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'user2',role:'viewer',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));"
-```
-
-**Con Python**
-
-**Bash**
-```bash
-jwt=$(docker compose exec api-rest python -c "import jwt,time; print(jwt.encode({'sub':'user1','role':'admin','exp':int(time.time())+3600}, 'gino', algorithm='HS256'))")
-```
-**PowerShell**
-```powershell
-$jwt = docker compose exec api-rest python -c "import jwt,time; print(jwt.encode({'sub':'user1','role':'admin','exp':int(time.time())+3600}, 'gino', algorithm='HS256'))"
-```
-
-### Utilizzo token
-
-**REST**:
-
-**Bash**
-```bash
-jwt="<il-tuo-token>"
-curl -H "Authorization:  Bearer $jwt" http://localhost:8080/products
-curl -X PATCH -H "Authorization: Bearer $jwt" "http://localhost:8080/products/1?stock=10"
-```
-**PowerShell**
-```powershell
-$jwt="<il-tuo-token>"
-Invoke-RestMethod http://localhost:8080/products -Headers @{"Authorization"="Bearer $jwt"}
-Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=10" -Method Patch -Headers @{"Authorization"="Bearer $jwt"}
-```
-
-**GraphQL** (Playground):
-
-```json
-{
-  "Authorization": "Bearer <il-tuo-token>"
-}
-```
-
-**WebSocket**:
-
-> **Comando identico per bash e PowerShell**
-
-```bash
-jwt="<il-tuo-token>"
-wscat -c "ws://localhost:7070/ws?token=$jwt"
-```
-
-### Test ruoli
-
-**Admin** (write consentito):
-
-**Bash**
-```bash
-jwt_admin=$(node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'admin',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));")
-curl -X PATCH -H "Authorization: Bearer $jwt_admin" "http://localhost:8080/products/1?stock=50"
-# Atteso: 200 OK
-```
-**PowerShell**
-```powershell
-$jwt_admin = node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'admin',role:'admin',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));"
-Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=50" -Method Patch -Headers @{"Authorization"="Bearer $jwt_admin"}
-# Atteso: 200 OK
-```
-
-**Viewer** (write negato):
-**Bash**
-```bash
-jwt_viewer=$(node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'viewer',role:'viewer',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));")
-curl -X PATCH -H "Authorization: Bearer $jwt_viewer" "http://localhost:8080/products/1?stock=50"
-# Atteso: 403 Forbidden
-```
-**PowerShell**
-```powershell
-$jwt_viewer = node -e "const jwt=require('jsonwebtoken'); console.log(jwt.sign({sub:'viewer',role:'viewer',exp:Math.floor(Date.now()/1000)+3600}, 'gino'));"
-Invoke-RestMethod -Uri "http://localhost:8080/products/1?stock=50" -Method Patch -Headers @{"Authorization"="Bearer $jwt_viewer"}
-# Atteso: 403 Forbidden
-```
----
-
-## Osservabilità
-
-### Logging strutturato JSON
-
-Tutti i servizi emettono log in formato JSON arricchiti con `request_id` e `trace_id` per facilitare il tracciamento delle richieste sull’intera architettura.
+Tutti i servizi emettono log strutturati in JSON con `request_id` e `trace_id` per il tracciamento distribuito. Le metriche Prometheus sono esposte su `/metrics` e includono:
+- Totale richieste per endpoint/metodo
+- Latenza (media, p95, p99)
+- Errori
+- Breakdown per endpoint
 
 **Visualizzazione log servizio:**
-
-**I comandi sono identici per bash e PowerShell**
 ```bash
 docker compose logs api-rest --tail=20
 docker compose logs gateway-graphql --tail=20
 docker compose logs ws-events --tail=20
 ```
 
-**Formato tipico log**:
+**Esempio di log:**
 ```json
 {
   "asctime": "2026-01-05T17:15:57.254Z",
@@ -488,19 +320,10 @@ docker compose logs ws-events --tail=20
 ```
 
 **Tracciamento custom tramite header:**
-
-**bash**
 ```bash
 curl -H "X-Trace-ID: my-trace-123" http://localhost:8080/products/1
 docker compose logs api-rest --tail=5 | grep my-trace-123
 ```
-**powershell**
-```powershell
-Invoke-RestMethod http://localhost:8080/products/1 -Headers @{"X-Trace-ID" = "my-trace-123"}
-docker compose logs api-rest --tail=5 | Select-String my-trace-123
-```
-
----
 
 ### Metriche Prometheus
 
@@ -514,12 +337,13 @@ Tutti i servizi espongono endpoint `/metrics` compatibili Prometheus per raccolt
 
 **Visualizza metriche chiave:**
 
+
 **bash**
 ```bash
 curl http://localhost:8080/metrics | grep api_rest_requests_total
 curl http://localhost:9090/metrics | grep graphql_requests_total
 ```
-**powershell**
+**PowerShell**
 ```powershell
 Invoke-RestMethod http://localhost:8080/metrics | Select-String api_rest_requests_total
 Invoke-RestMethod http://localhost:9090/metrics | Select-String graphql_requests_total
@@ -531,28 +355,15 @@ Invoke-RestMethod http://localhost:9090/metrics | Select-String graphql_requests
 
 Verifica la disponibilità di ciascun servizio e delle sue dipendenze tramite endpoint `/health`.
 
-**Senza JWT:**
+
 
 **bash**
 ```bash
 curl http://localhost:8080/health
 ```
-**powershell**
+**PowerShell**
 ```powershell
 Invoke-RestMethod http://localhost:8080/health
-```
-
-**Con JWT:**
-
-**bash**
-```bash
-jwt="<il-tuo-token>"
-curl -H "Authorization: Bearer $jwt" http://localhost:8080/health
-```
-**powershell**
-```powershell
-$jwt="<il-tuo-token>"
-Invoke-RestMethod http://localhost:8080/health -Headers @{"Authorization"="Bearer $jwt"}
 ```
 
 **Risposta attesa:**
@@ -565,7 +376,7 @@ Invoke-RestMethod http://localhost:8080/health -Headers @{"Authorization"="Beare
 
 **Controllo stato dei container:**
 
-**I comandi sono identici per bash e PowerShell**
+
 ```bash
 docker compose ps
 # Verifica colonna "STATUS": deve riportare (healthy)
@@ -722,21 +533,7 @@ wscat -c ws://localhost:7070/ws -H "Origin: http://badorigin.com"  # rifiutato
 wscat -c ws://localhost:7070/ws -H "Origin: http://localhost:3000"  # ok
 ```
 
-**JWT su WebSocket:**  
-**bash**
-```bash
-export JWT_SECRET="test"
-docker compose up -d ws-events
-TOKEN="<jwt>"
-wscat -c "ws://localhost:7070/ws?token=$TOKEN"
-```
-**powershell**
-```powershell
-$env:JWT_SECRET="test"
-docker compose up -d ws-events
-$TOKEN="<jwt>"
-wscat -c "ws://localhost:7070/ws?token=$TOKEN"
-```
+
 
 ---
 
@@ -977,27 +774,17 @@ artillery run artillery-discount-rest.yml
 
 Ripristina i prodotti ai valori iniziali.
 
+
 **bash**
 ```bash
 curl -X POST http://localhost:8080/reset
 ```
-**powershell**
+**PowerShell**
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:8080/reset" -Method Post
 ```
 
-**Con JWT:**
 
-**bash**
-```bash
-jwt="<il-tuo-token>"
-curl -X POST -H "Authorization: Bearer $jwt" http://localhost:8080/reset
-```
-**powershell**
-```powershell
-$jwt="<il-tuo-token>"
-Invoke-RestMethod -Uri "http://localhost:8080/reset" -Method Post -Headers @{"Authorization"="Bearer $jwt"}
-```
 
 **Risposta:**
 ```json
@@ -1013,23 +800,17 @@ Invoke-RestMethod -Uri "http://localhost:8080/reset" -Method Post -Headers @{"Au
 
 Visualizza in tempo reale gli eventi provenienti dai servizi tramite uno script.
 
-**I comandi sono identici per bash e PowerShell**
-```bash
-node scripts/ws-events-consumer.js
-```
-
-**Con JWT:**
 
 **bash**
 ```bash
-jwt="<il-tuo-token>"
-JWT_TOKEN="$jwt" node scripts/ws-events-consumer.js
-```
-**powershell**
-```powershell
-$env:JWT_TOKEN="$jwt"
 node scripts/ws-events-consumer.js
 ```
+**PowerShell**
+```powershell
+node scripts/ws-events-consumer.js
+```
+
+
 
 **Output esempio:**
 ```
@@ -1041,8 +822,13 @@ node scripts/ws-events-consumer.js
 
 ### 3. Report latenza WebSocket
 
-**I comandi sono identici per bash e PowerShell**
+
+**bash**
 ```bash
+node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
+```
+**PowerShell**
+```powershell
 node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
 ```
 
@@ -1071,15 +857,13 @@ Std deviation:      1.06 ms
 
 ### Sicurezza
 
-| Variabile               | Default           | Descrizione                                 |
-|-------------------------|-------------------|---------------------------------------------|
-| `JWT_SECRET`            | *(vuoto)*         | Segreto JWT; se impostato abilita auth      |
-| `JWT_ALGORITHM`         | `HS256`           | Algoritmo JWT                               |
-| `RATE_LIMIT`            | `100/minute`      | Rate limit REST (formato slowapi)           |
-| `RATE_LIMIT_PER_MIN`    | `100`             | Rate limit GraphQL (richieste/minuto)       |
-| `WS_MESSAGE_RATE_LIMIT` | `10`              | Rate limit WebSocket (messaggi/secondo)     |
+| Variabile               | Default           | Descrizione                                   |
+|-------------------------|-------------------|-----------------------------------------------|
+| `RATE_LIMIT`            | `100/minute`      | Rate limit REST (formato slowapi)             |
+| `RATE_LIMIT_PER_MIN`    | `100`             | Rate limit GraphQL (richieste/minuto)         |
+| `WS_MESSAGE_RATE_LIMIT` | `10`              | Rate limit WebSocket (messaggi/secondo)       |
 | `WS_ALLOWED_ORIGINS`    | `*`               | Origini WebSocket consentite (comma-separated)|
-| `WS_MAX_PAYLOAD`        | `1048576`         | Max payload WebSocket (byte)                |
+| `WS_MAX_PAYLOAD`        | `1048576`         | Max payload WebSocket (byte)                  |
 
 ### GraphQL
 
@@ -1151,24 +935,22 @@ Std deviation:      1.06 ms
 
 
 
-## Troubleshooting
 
-### Problemi comuni
+## Problemi comuni
 
 | Problema | Causa | Soluzione |
 |----------|-------|-----------|
-| **401 Unauthorized** | JWT abilitato ma token mancante | Genera token e passa in header/query |
-| **403 Forbidden** | Ruolo `viewer` su endpoint write | Usa token con `role: admin` |
 | **429 Too Many Requests** | Rate limit superato | Attendi 1 minuto o aumenta `RATE_LIMIT` |
 | **Nessun evento WebSocket** | Redis non pubblica o ws-events down | Verifica `docker compose logs ws-events` |
 | **Container non healthy** | Dipendenza (Redis/api-rest) non pronta | `docker compose logs <servizio>` |
 | **MCP host esce subito** | One-shot normale | Output già completato; verifica con `docker compose logs mcp-host` |
 | **Metriche vuote** | Nessun traffico generato | Esegui query/richieste prima di leggere `/metrics` |
-| **Porta 6379 occupata** | Redis già in esecuzione | `netstat -ano \| findstr :6379` e termina processo |
+| **Porta 6379 occupata** | Redis già in esecuzione | `netstat -ano | findstr :6379` e termina processo |
+| **WebSocket origin non permessa** | Origin non whitelisted | Controlla variabile `WS_ALLOWED_ORIGINS` |
+| **Query GraphQL troppo profonda** | Depth limit superato | Riduci profondità query o aumenta `GRAPHQL_DEPTH_LIMIT` |
 
-### Comandi diagnostici
+## Comandi diagnostici
 
-**I comandi sono identici per bash e powershell**
 ```bash
 # Verifica stato servizi
 docker compose ps
@@ -1184,11 +966,17 @@ docker compose down -v
 docker compose build
 docker compose up -d
 
-# Verifica JWT attivo
-docker compose exec api-rest sh -c 'echo "JWT_SECRET=$JWT_SECRET"'
-
 # Test connessione Redis
 docker compose exec redis redis-cli ping
+
+# Visualizza metriche REST
+curl http://localhost:8080/metrics | grep api_rest_requests_total
+
+# Visualizza metriche GraphQL
+curl http://localhost:9090/metrics | grep graphql_requests_total
+
+# Test health check
+curl http://localhost:8080/health
 ```
 
 ---
