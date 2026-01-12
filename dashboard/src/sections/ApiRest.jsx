@@ -18,23 +18,30 @@ const DEFAULTS = [
     body: '',
   },
   {
-    name: 'Patch stock (single)',
+    name: 'Patch stock (single >25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products/1?stock=60',
     body: '',
   },
   {
-    name: 'Patch stock (low stock <25)',
+    name: 'Patch stock (single <25)',
+    method: 'PATCH',
+    url: 'http://localhost:8080/products/1?stock=4',
+    body: '',
+  },
+  {
+    name: 'Patch stock (multiple >25)',
+    method: 'PATCH',
+    url: 'http://localhost:8080/products',
+    body: '[{"id":1,"stock":100},{"id":6,"stock":80},{"id":10,"stock":128}]',
+  },
+  {
+    name: 'Patch stock (multiple <25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products',
     body: '[{"id":2,"stock":10},{"id":3,"stock":5},{"id":9,"stock":8}]',
   },
-  {
-    name: 'Patch stock (high stock >25)',
-    method: 'PATCH',
-    url: 'http://localhost:8080/products',
-    body: '[{"id":1,"stock":60},{"id":6,"stock":70},{"id":10,"stock":45}]',
-  },
+  
   {
     name: 'Patch price (single)',
     method: 'PATCH',

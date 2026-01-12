@@ -39,8 +39,6 @@ L’obiettivo è fornire un’architettura di riferimento, facilmente testabile 
 - **Docker** e **Docker Compose**
 - **Node.js** (per wscat, artillery, dashboard)
 - **Python 3.11+** (opzionale: test locali, MCP host)
-- **Artillery**: `npm install -g artillery`
-- **wscat**: `npm install -g wscat`
 
 
 ---
@@ -49,17 +47,22 @@ L’obiettivo è fornire un’architettura di riferimento, facilmente testabile 
 
 ### 1. Clona la repo
 
-**Bash:**
 ```bash
 git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
 cd progetto-tesi-lorenzo-maoloni
 ```
-**PowerShell:**
-```powershell
-git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
-cd progetto-tesi-lorenzo-maoloni
+
+### 2. Installa Artillery
+
+```bash
+npm install -g artillery
 ```
 
+### 3. Installa wscat
+
+```bash
+npm install -g wscat
+```
 ---
 
 
