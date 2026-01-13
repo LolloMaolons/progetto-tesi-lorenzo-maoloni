@@ -86,15 +86,6 @@ def get_low_stock(threshold=LOW_STOCK_THRESHOLD):
     products = resp.json()
     return [p for p in products if p["stock"] < threshold]
 
-def discount_all_low_stock(discount, threshold=LOW_STOCK_THRESHOLD):
-    low_products = get_low_stock(threshold)
-    results = []
-    for p in low_products:
-        pid = p["id"]
-        results.append(discount_product(pid, discount, threshold))
-    return results
-
-
 def discount_product(pid, discount, threshold=LOW_STOCK_THRESHOLD):
     prod = requests.get(f"{REST_BASE}/products/{pid}").json()
     if prod["stock"] < threshold:
@@ -109,7 +100,6 @@ def discount_product(pid, discount, threshold=LOW_STOCK_THRESHOLD):
     else:
         return {"message": f"Prodotto {pid} non in low stock (stock={prod['stock']}, soglia={threshold})", **prod}
 
-
 def reset_product_price(pid, threshold=LOW_STOCK_THRESHOLD):
     prod = requests.get(f"{REST_BASE}/products/{pid}").json()
     if prod["stock"] >= threshold:
@@ -122,6 +112,15 @@ def reset_product_price(pid, threshold=LOW_STOCK_THRESHOLD):
             return {"message": f"Prezzo già a valore base per prodotto {pid}", **prod}
     else:
         return {"message": f"Prodotto {pid} non in high stock (stock={prod['stock']}, soglia={threshold})", **prod}
+
+def discount_all_low_stock(discount, threshold=LOW_STOCK_THRESHOLD):
+    low_products = get_low_stock(threshold)
+    results = []
+    for p in low_products:
+        pid = p["id"]
+        results.append(discount_product(pid, discount, threshold))
+    return results
+
 
 def reset_all_high_stock(threshold=LOW_STOCK_THRESHOLD):
     resp = requests.get(f"{REST_BASE}/products")

@@ -18,6 +18,7 @@ const DEFAULTS = [
         name
         price
         stock
+        lowStock
         category
         description
       }
@@ -31,6 +32,7 @@ const DEFAULTS = [
         name
         price
         stock
+        lowStock
         category
         description
       }

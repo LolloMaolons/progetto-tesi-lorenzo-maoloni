@@ -30,7 +30,7 @@ def handle(req):
         args = params.get("arguments", {})
 
         if tool == "catalog.searchLowStock":
-            threshold = int(args.get("threshold", 5))
+            threshold = int(args.get("threshold", 25))
             r = requests.get(f"{REST_BASE}/products")
             items = [p for p in r.json() if p["stock"] <= threshold]
             return respond(id_, {"items": items})
@@ -38,7 +38,7 @@ def handle(req):
         if tool == "catalog.applyDiscount":
             pid = int(args.get("product_id"))
             percent = float(args.get("percent", 0))
-            threshold = int(args.get("threshold", 5))
+            threshold = int(args.get("threshold", 25))
             prod = requests.get(f"{REST_BASE}/products/{pid}")
             if prod.status_code != 200:
                 return respond(id_, error="product not found")
