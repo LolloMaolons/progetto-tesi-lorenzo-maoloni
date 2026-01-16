@@ -89,5 +89,5 @@ services:
       - "5000:5000"
     volumes:
       - ./mcp-host:/app
-      - ./mcp-server-orders/server.py:/app/server.py:ro
-      - ./mcp-server-catalog/server.py:/app/mcp-server-catalog/server.py:ro
+      - ./mcp-server-orders/server.py:/app/server-orders.py:ro
+      - ./mcp-server-catalog/server.py:/app/server-catalog.py:ro

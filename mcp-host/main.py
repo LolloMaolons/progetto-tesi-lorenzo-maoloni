@@ -29,13 +29,12 @@ def call_mcp_server(server_script, method, params=None):
     return json.loads(stdout.strip())
 
 
-CATALOG_SERVER = os.getenv("CATALOG_SERVER", "/app/mcp-server-catalog/server.py")
-ORDERS_SERVER = os.getenv("ORDERS_SERVER", "/app/server.py")
+CATALOG_SERVER = os.getenv("CATALOG_SERVER", "/app/server-catalog.py")
+ORDERS_SERVER = os.getenv("ORDERS_SERVER", "/app/server-orders.py")
 
 @app.post("/rpc")
 async def rpc_proxy(request: Request):
     body = await request.json()
-    # Scegli il server MCP in base al metodo richiesto
     method = body.get("method", "")
     if method.startswith("orders.") or (method == "callTool" and body.get("params", {}).get("name", "").startswith("orders.")):
         server_script = ORDERS_SERVER
@@ -92,17 +91,27 @@ async def apply_discount(request: Request):
 
 @app.post("/mcp/reset-price")
 async def reset_price(request: Request):
-    body = await request.json()
-    product_id = body.get("product_id")
-    threshold = body.get("threshold", 25)
-    response = call_mcp_server(CATALOG_SERVER, "callTool", {
-        "name": "catalog.resetPrice",
-        "arguments": {
-            "product_id": product_id,
-            "threshold": threshold
-        }
-    })
-    return JSONResponse(content=response)
+    """
+    Wrapper HTTP per catalog.resetPrice.
+    Accetta body JSON {"product_id": int, "threshold": int facoltativo}.
+    Esegue il tool MCP catalog.resetPrice tramite JSON-RPC e restituisce la risposta.
+    """
+    try:
+        body = await request.json()
+        product_id = body.get("product_id")
+        threshold = body.get("threshold", 25)
+        if product_id is None:
+            return JSONResponse(status_code=400, content={"error": "product_id richiesto"})
+        response = call_mcp_server(CATALOG_SERVER, "callTool", {
+            "name": "catalog.resetPrice",
+            "arguments": {
+                "product_id": product_id,
+                "threshold": threshold
+            }
+        })
+        return JSONResponse(content=response)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/mcp/tools")
 async def list_tools():
