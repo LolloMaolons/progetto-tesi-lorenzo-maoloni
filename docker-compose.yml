@@ -86,4 +86,8 @@ services:
       redis:
         condition: service_healthy
     ports:
-    - "5000:5000"
+      - "5000:5000"
+    volumes:
+      - ./mcp-host:/app
+      - ./mcp-server-orders/server.py:/app/server.py:ro
+      - ./mcp-server-catalog/server.py:/app/mcp-server-catalog/server.py:ro

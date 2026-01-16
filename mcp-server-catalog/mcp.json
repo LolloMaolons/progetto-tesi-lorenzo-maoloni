@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "catalog": {
+      "command": "python",
+      "args": ["server.py"],
+      "env": {
+        "REST_BASE_URL": "http://api-rest:8080",
+        "REDIS_URL": "redis://redis:6379/0"
+      }
+    }
+  }
+}

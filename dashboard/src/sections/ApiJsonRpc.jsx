@@ -11,20 +11,28 @@ import { saveRequests, loadRequests } from './requestStore';
 
 const DEFAULTS = [
   {
-    name: 'Discount prodotto id 1',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "discountProduct",\n  "params": { "id": 1, "discount": 10, "threshold": 25}\n}',
+    name: 'Notify pending orders (product_id 123)',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "orders.notifyPending",\n    "arguments": { "product_id": 123 }\n  }\n}',
   },
   {
-    name: 'Reset prodotto id 1',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "resetProduct",\n  "params": { "id": 1, "threshold": 25 }\n}',
+    name: 'Sconto prodotto id 1',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.applyDiscount",\n    "arguments": { "product_id": 1, "percent": 10, "threshold": 25 }\n  }\n}',
   },
   {
-    name: 'Discount all low stock',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "discountAllLowStock",\n  "params": { "discount": 10, "threshold": 25 }\n}',
+    name: 'Reset prezzo prodotto id 1',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.resetPrice",\n    "arguments": { "product_id": 1, "threshold": 25 }\n  }\n}',
   },
   {
-    name: 'Reset all high stock',
-    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "resetAllHighStock",\n  "params": { "threshold": 25 }\n}',
+    name: 'Sconto tutti low stock',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.applyDiscountAll",\n    "arguments": { "percent": 10, "threshold": 25 }\n  }\n}',
+  },
+  {
+    name: 'Reset prezzo tutti high stock',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.resetPriceAll",\n    "arguments": { "threshold": 25 }\n  }\n}',
+  },
+  {
+    name: 'Cerca prodotti low stock',
+    body: '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.searchLowStock",\n    "arguments": { "threshold": 25 }\n  }\n}',
   },
 ];
 

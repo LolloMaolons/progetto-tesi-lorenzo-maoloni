@@ -33,13 +33,13 @@ const DEFAULTS = [
     name: 'Patch stock (multiple >25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products',
-    body: '[{"id":1,"stock":100},{"id":6,"stock":80},{"id":10,"stock":128}]',
+    body: '[{"id":1,"stock":100},{"id":9,"stock":80},{"id":10,"stock":128},{"id":19,"stock":128}]',
   },
   {
     name: 'Patch stock (multiple <25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products',
-    body: '[{"id":2,"stock":10},{"id":3,"stock":5},{"id":9,"stock":8}]',
+    body: '[{"id":1,"stock":10},{"id":9,"stock":5},{"id":10,"stock":8},{"id":19,"stock":8}]',
   },
   
   {

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "orders": {
+      "command": "python",
+      "args": ["server.py"],
+      "env": {
+        "REDIS_URL": "redis://redis:6379/0"
+      }
+    }
+  }
+}
