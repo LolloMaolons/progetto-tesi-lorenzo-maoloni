@@ -1,0 +1,26 @@
+﻿REST API RATE LIMITING TEST
+Data: 2026-01-19 16:14:17
+
+Configurazione:
+- Rate Limit: 5 richieste/minuto
+- Richieste totali: 10
+- Intervallo tra richieste: 0.5s
+
+Risultati:
+Request Status Latency_ms Message     
+------- ------ ---------- -------     
+      1    200      20,58 OK          
+      2    200      21,66 OK          
+      3    200      21,36 OK          
+      4    200      20,54 OK          
+      5    200      21,21 OK          
+      6    429       6,97 RATE LIMITED
+      7    429       5,11 RATE LIMITED
+      8    429       4,12 RATE LIMITED
+      9    429       3,74 RATE LIMITED
+     10    429       5,38 RATE LIMITED
+
+Statistiche:
+- Richieste accettate (200): 5
+- Richieste rifiutate (429): 5
+- Latenza media: 13.07 ms

@@ -160,7 +160,10 @@ export default function ApiGraphQL() {
             >
               <ListItemButton selected={selected === i} onClick={() => handleSelect(i)}>
                 <ListItemIcon><DescriptionIcon color={selected === i ? 'primary' : 'action'} /></ListItemIcon>
-                <ListItemText primary={q.name} secondary={q.query.slice(0, 40) + (q.query.length > 40 ? '...' : '')} />
+                <ListItemText
+                  primary={i < DEFAULTS.length ? q.name : `Custom Query ${i - DEFAULTS.length + 1}`}
+                  secondary={q.query.slice(0, 40) + (q.query.length > 40 ? '...' : '')}
+                />
               </ListItemButton>
             </ListItem>
           ))}

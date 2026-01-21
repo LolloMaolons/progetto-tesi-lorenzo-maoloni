@@ -18,6 +18,12 @@ const DEFAULTS = [
     body: '',
   },
   {
+    name: 'Get recommendations for product 1',
+    method: 'GET',
+    url: 'http://localhost:8080/products/1/recommendations',
+    body: '',
+  },
+  {
     name: 'Patch stock (single >25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products/1?stock=60',
@@ -33,13 +39,13 @@ const DEFAULTS = [
     name: 'Patch stock (multiple >25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products',
-    body: '[{"id":1,"stock":100},{"id":9,"stock":80},{"id":10,"stock":128},{"id":19,"stock":128}]',
+    body: '[{"id":1,"stock":100},{"id":9,"stock":80},{"id":10,"stock":128},{"id":19,"stock":104}]',
   },
   {
     name: 'Patch stock (multiple <25)',
     method: 'PATCH',
     url: 'http://localhost:8080/products',
-    body: '[{"id":1,"stock":10},{"id":9,"stock":5},{"id":10,"stock":8},{"id":19,"stock":8}]',
+    body: '[{"id":1,"stock":10},{"id":9,"stock":5},{"id":10,"stock":8},{"id":19,"stock":14}]',
   },
   
   {
@@ -152,7 +158,22 @@ export default function ApiRest() {
             >
               <ListItemButton selected={selected === i} onClick={() => handleSelect(i)}>
                 <ListItemIcon><DescriptionIcon color={selected === i ? 'primary' : 'action'} /></ListItemIcon>
-                <ListItemText primary={req.name} secondary={`${req.method} ${req.url}`} />
+                <ListItemText
+                  primary={i < DEFAULTS.length
+                    ? req.name
+                    : `Custom ${req.method} ${i - DEFAULTS.length + 1}`}
+                  secondary={
+                    <span style={{
+                      display: 'inline-block',
+                      maxWidth: '180px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      verticalAlign: 'bottom',
+                      wordBreak: 'break-all'
+                    }}>{`${req.method} ${req.url}`}</span>
+                  }
+                />
               </ListItemButton>
             </ListItem>
           ))}

@@ -118,7 +118,10 @@ export default function ApiJsonRpc() {
             >
               <ListItemButton selected={selected === i} onClick={() => handleSelect(i)}>
                 <ListItemIcon><DescriptionIcon color={selected === i ? 'primary' : 'action'} /></ListItemIcon>
-                <ListItemText primary={req.name} secondary={req.body.slice(0, 40) + (req.body.length > 40 ? '...' : '')} />
+                <ListItemText
+                  primary={i < DEFAULTS.length ? req.name : `Custom JSON-RPC ${i - DEFAULTS.length + 1}`}
+                  secondary={req.body.slice(0, 40) + (req.body.length > 40 ? '...' : '')}
+                />
               </ListItemButton>
             </ListItem>
           ))}
