@@ -80,14 +80,31 @@ services:
     environment:
       REST_BASE_URL: http://api-rest:8080
       REDIS_URL: redis://redis:6379/0
+      OLLAMA_URL: http://ollama:11434/api/chat
     depends_on:
       api-rest:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ollama:
+        condition: service_started
     ports:
       - "5000:5000"
     volumes:
       - ./mcp-host:/app
       - ./mcp-server-orders/server.py:/app/server-orders.py:ro
       - ./mcp-server-catalog/server.py:/app/server-catalog.py:ro
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_MODELS=/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
+  
+

@@ -219,7 +219,6 @@ def handle(req):
                         old_price = prod["price"]
                         upd = requests.patch(f"{REST_BASE}/products/{pid}", params={"price": base_price})
                         upd.raise_for_status()
-                        # Evento price_update pubblicato solo da API REST
                         return respond(id_, {
                             "id": pid,
                             "old_price": old_price,

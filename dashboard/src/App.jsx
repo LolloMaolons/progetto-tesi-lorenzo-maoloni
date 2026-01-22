@@ -5,7 +5,8 @@ import ApiGraphQL from './sections/ApiGraphQL';
 import ApiWebSocket from './sections/ApiWebSocket';
 import ApiJsonRpc from './sections/ApiJsonRpc';
 import { WebSocketProvider } from './sections/WebSocketContext';
-import { ApiOutlined, CodeOutlined, WebOutlined, DataObjectOutlined } from '@mui/icons-material';
+import { ApiOutlined, CodeOutlined, WebOutlined, DataObjectOutlined, SmartToyOutlined } from '@mui/icons-material';
+import ApiLLM from './sections/ApiLLM';
 
 const theme = createTheme({
   palette: {
@@ -25,6 +26,7 @@ const sections = [
   { label: 'GraphQL', icon: <CodeOutlined />, component: <ApiGraphQL /> },
   { label: 'WebSocket', icon: <WebOutlined />, component: <ApiWebSocket /> },
   { label: 'JSON-RPC', icon: <DataObjectOutlined />, component: <ApiJsonRpc /> },
+  { label: 'LLM', icon: <SmartToyOutlined />, component: <ApiLLM /> },
 ];
 
 export default function App() {

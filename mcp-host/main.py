@@ -1,6 +1,8 @@
-
+from openai import OpenAI
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+import requests
 from fastapi.middleware.cors import CORSMiddleware
 import subprocess
 import json
@@ -14,6 +16,110 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+LLM_MODEL = os.getenv("LLM_MODEL", "llama2")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
+openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
+
+@app.post("/llm-invoke")
+async def llm_invoke(request: Request):
+    """
+    Endpoint per invocare LLM SOLO per tool MCP.
+    Body: {"prompt": "..."}
+    """
+    body = await request.json()
+    prompt = body.get("prompt")
+    if not prompt:
+        return JSONResponse(status_code=400, content={"error": "Prompt richiesto"})
+
+    allowed_keywords = ["catalog.", "orders.", "tool MCP", "sconto", "prezzo", "stock", "prodotto", "reset"]
+    if not any(kw.lower() in prompt.lower() for kw in allowed_keywords):
+        return JSONResponse(status_code=403, content={"error": "Richiesta non consentita: puoi solo usare i tool MCP (catalog, orders, sconto, prezzo, stock, prodotto, reset)"})
+
+    system_prompt = (
+    "Sei un assistente MCP. Quando ti viene chiesto di eseguire un'azione, rispondi SEMPRE e SOLO con un oggetto JSON-RPC valido per MCP, scegliendo SOLO tra questi tool:\n"
+    "- catalog.searchLowStock: List products with stock <= threshold\n"
+    "- catalog.applyDiscountAll: Applica uno sconto percentuale a tutti i prodotti con stock < threshold e non già scontati\n"
+    "- catalog.resetPriceAll: Resetta il prezzo base di tutti i prodotti con stock >= threshold\n"
+    "- catalog.applyDiscount: Apply percent discount to a product if not already discounted and stock < threshold\n"
+    "- catalog.resetPrice: Reset product price to base if stock >= threshold\n"
+    "Esempio di risposta:\n"
+    '{"jsonrpc": "2.0", "id": 1, "method": "callTool", "params": {"name": "catalog.applyDiscountAll", "arguments": {"percent": 10, "threshold": 25}}}\n'
+    "Non aggiungere spiegazioni, testo extra, markdown o altro. Solo il JSON-RPC. Se la richiesta non riguarda questi tool, rispondi solo con: {\"error\": \"Posso solo aiutarti con i tool MCP.\"}"
+)
+    data = {
+        "model": LLM_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+    }
+    try:
+        resp = requests.post(OLLAMA_URL, json=data, stream=True)
+        resp.raise_for_status()
+        result = ""
+        buffer = b""
+        for chunk in resp.iter_content(chunk_size=None):
+            buffer += chunk
+            while b"\n" in buffer:
+                line, buffer = buffer.split(b"\n", 1)
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    if "message" in obj and obj["message"]["role"] == "assistant":
+                        result += obj["message"].get("content", "")
+                except Exception:
+                    continue
+        if buffer:
+            try:
+                obj = json.loads(buffer)
+                if "message" in obj and obj["message"]["role"] == "assistant":
+                    result += obj["message"].get("content", "")
+            except Exception:
+                pass
+
+        import re
+        import re
+        m = re.search(r"```json(.*?)```", result, re.DOTALL)
+        json_rpc = None
+        if m:
+            try:
+                json_rpc = json.loads(m.group(1))
+            except Exception:
+                pass
+        if not json_rpc:
+            m = re.search(r"({[^}]+})", result, re.DOTALL)
+            if m:
+                try:
+                    json_rpc = json.loads(m.group(1))
+                except Exception:
+                    pass
+        if json_rpc and isinstance(json_rpc, dict) and json_rpc.get("method") == "callTool":
+            try:
+                mcp_resp = requests.post("http://localhost:5000/rpc", json=json_rpc)
+                mcp_resp.raise_for_status()
+                mcp_result = mcp_resp.json()
+                summary = "Azione MCP eseguita: "
+                params = json_rpc.get("params", {})
+                tool = params.get("name")
+                arguments = params.get("arguments")
+                summary += f"tool={tool}, args={arguments}. "
+                if "result" in mcp_result:
+                    summary += f"Risultato: {mcp_result['result']}"
+                elif "error" in mcp_result:
+                    summary += f"Errore: {mcp_result['error']}"
+                return JSONResponse(content={"result": mcp_result, "summary": summary, "llm": result})
+            except Exception as e:
+                return JSONResponse(content={"error": f"Errore esecuzione tool MCP: {str(e)}", "llm": result})
+        return JSONResponse(content={"result": result, "summary": "Nessuna azione MCP eseguita."})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 
 def call_mcp_server(server_script, method, params=None):
     request = {"jsonrpc": "2.0", "id": 1, "method": method}
@@ -42,10 +148,12 @@ async def rpc_proxy(request: Request):
         server_script = CATALOG_SERVER
     proc = subprocess.Popen([
         "python", server_script
-    ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
-    stdout, _ = proc.communicate(json.dumps(body) + "\n")
+    ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = proc.communicate(json.dumps(body) + "\n")
     import sys
     print("[MCP DEBUG] STDOUT RAW:", repr(stdout), file=sys.stderr, flush=True)
+    if stderr:
+        print("[MCP DEBUG] STDERR RAW:", repr(stderr), file=sys.stderr, flush=True)
     try:
         response = json.loads(stdout.strip())
     except Exception:
