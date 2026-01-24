@@ -7,7 +7,7 @@ import http from 'http';
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379/0";
 const MAX_PAYLOAD = parseInt(process.env.WS_MAX_PAYLOAD || "1048576", 10);
 const ALLOWED_ORIGINS = (process.env.WS_ALLOWED_ORIGINS || "*").split(",");
-const MESSAGE_RATE_LIMIT = parseInt(process.env.WS_MESSAGE_RATE_LIMIT || "10", 10);
+const MESSAGE_RATE_LIMIT = parseInt(process.env.WS_MESSAGE_RATE_LIMIT || "20", 10);
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(

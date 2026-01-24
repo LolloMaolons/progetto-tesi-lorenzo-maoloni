@@ -43,7 +43,7 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       WS_ALLOWED_ORIGINS: ${WS_ALLOWED_ORIGINS:-http://localhost:5173}
-      WS_MESSAGE_RATE_LIMIT: ${WS_MESSAGE_RATE_LIMIT:-10}
+      WS_MESSAGE_RATE_LIMIT: ${WS_MESSAGE_RATE_LIMIT:-20}
       WS_MAX_PAYLOAD:  ${WS_MAX_PAYLOAD:-1048576}
     depends_on:
       redis:
