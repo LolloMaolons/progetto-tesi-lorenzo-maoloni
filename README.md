@@ -94,7 +94,7 @@ Apri nel browser:
 | **ws-events**         | Node.js + ws      | Server WebSocket, inoltra eventi da Redis                                   |
 | **mcp-server-catalog**| Python MCP        | Server MCP con tool `searchLowStock`, `applyDiscount`                       |
 | **mcp-server-orders** | Python MCP        | Server MCP con tool `notifyPending` (mock)                                  |
-| **mcp-host**          | Python            | Orchestratore MCP (one-shot): applica sconti automatici                     |
+| **mcp-host**          | Python LLM/MCP    | Orchestratore MCP/LLM: applica sconti automatici, tool batch, azioni agent  |
 | **dashboard**         | React + Vite      | Frontend per test funzionali e visualizzazione dati                         |
 
 > **Nota**: di default il database è in-memory.
@@ -103,7 +103,7 @@ Apri nel browser:
 ---
 
 
-## Funzionamento dettagliato
+## Funzionamento dettagliato e orchestrazione LLM
 
 L’architettura è composta da microservizi che comunicano tramite REST, GraphQL, WebSocket e MCP. Tutti i servizi sono containerizzati e orchestrati tramite Docker Compose. Le modifiche ai dati (prodotti) vengono propagate in tempo reale tramite eventi Redis e WebSocket. La dashboard frontend consente di testare e confrontare i paradigmi direttamente da interfaccia grafica, mentre tutti i servizi espongono endpoint per test funzionali e raccolta metriche.
 
@@ -112,13 +112,58 @@ L’architettura è composta da microservizi che comunicano tramite REST, GraphQ
 2. Le modifiche ai prodotti sono gestite da api-rest e propagate tramite Redis.
 3. ws-events inoltra gli eventi ai client WebSocket.
 4. gateway-graphql compone dati REST e logica custom.
-5. mcp-host e i server MCP orchestrano azioni batch e tool automatici.
+5. mcp-host e i server MCP/LLM orchestrano azioni batch, tool automatici e agenti LLM.
 
 ---
 
 Questa architettura supporta diversi tipi di test, tutti raccolti in questa sezione:
 
-### Test funzionali (API e orchestrazione)
+### Test funzionali (API, orchestrazione MCP/LLM e rate limiting)
+**MCP/LLM (agente one-shot e tool JSON-RPC)**
+
+L’agente MCP/LLM esegue:
+- Sconti automatici su prodotti low stock
+- Ripristino prezzi su prodotti high stock
+- Notifiche batch
+- Orchestrazione tramite tool JSON-RPC
+
+**Esempi di test MCP/LLM:**
+```bash
+curl -X POST http://localhost:5000/rpc -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
+```
+```powershell
+Invoke-RestMethod -Uri "http://localhost:5000/rpc" -Method Post -ContentType "application/json" -Body '{"jsonrpc":"2.0","id":1,"method":"discountAllLowStock","params":{"discount":10,"threshold":15}}'
+```
+
+### Test rate limiting REST/GraphQL
+
+Script Python `scripts/test-5-rate-limiting.py`:
+- Esegue 25 richieste REST e GraphQL
+- Mostra chiaramente 10 risposte 200 e 15 risposte 429 (REST), 9 risposte 200 e 16 risposte 429 (GraphQL)
+- Dimostra l’efficacia del rate limit
+
+**Esecuzione:**
+```bash
+python scripts/test-5-rate-limiting.py
+```
+**Output:**
+File `risultati-misurazioni/test-5-rate-limiting.json` con statistiche dettagliate
+
+### Test orchestrazione MCP/LLM
+
+Script Python e tool JSON-RPC permettono di testare l’agente MCP/LLM:
+- Sconti automatici
+- Ripristino prezzi
+- Notifiche batch
+
+**Esecuzione:**
+```bash
+python scripts/test-8-mcp-llm-orchestration.py
+```
+**Output:**
+File `risultati-misurazioni/test-8-mcp-llm-orchestration.json` con risultati delle azioni LLM
+
 
 **WebSocket**
 
@@ -234,9 +279,13 @@ Esegue l'orchestrazione automatica:
 ---
 
 
-## Dashboard frontend
+## Dashboard frontend: test paradigmi e orchestrazione LLM
 
 La dashboard (cartella `dashboard/`) è un frontend React che permette di:
+ - Testare tutte le API (REST, GraphQL, WebSocket, MCP/LLM) da interfaccia grafica
+ - Visualizzare risposte, metriche e confronti tra paradigmi
+ - Salvare e ripetere richieste di test
+ - Orchestrare azioni MCP/LLM direttamente dal frontend
 - Testare tutte le API (REST, GraphQL, WebSocket, MCP) da interfaccia grafica
 - Visualizzare risposte, metriche e confronti tra paradigmi
 - Salvare e ripetere richieste di test
@@ -255,136 +304,49 @@ Apri il browser su `http://localhost:5173`
 
 ## TESTING
 
-### 1. Test metriche server (Prometheus)
+### Analisi sperimentale: tutti gli script di test
 
-Tutti i servizi espongono endpoint `/metrics` compatibili Prometheus per raccolta e dashboarding.
+La cartella `scripts/` contiene tutti gli script Python e PowerShell usati per l’analisi sperimentale e il confronto tra paradigmi. Ogni script genera un file di output in `risultati-misurazioni/`.
 
-| Servizio        | Endpoint                            | Metriche principali                                                                         |
-|-----------------|-------------------------------------|---------------------------------------------------------------------------------------------|
-| **api-rest**    | `http://localhost:8080/metrics`     | `api_rest_requests_total`, `api_rest_request_duration_seconds`, `api_rest_errors_total`      |
-| **gateway-graphql** | `http://localhost:9090/metrics` | `graphql_requests_total`, `graphql_request_duration_seconds`, `graphql_errors_total`         |
-| **ws-events**   | (interno)                           | `ws_connections_total`, `ws_messages_total`, `ws_errors_total`                              |
+**Elenco script principali:**
 
-**Visualizza metriche chiave:**
+- `test-1-rest-vs-graphql-simple.py`: confronto REST vs GraphQL su query semplice
+- `test-2-rest-vs-graphql-composite.py`: confronto REST vs GraphQL su query composta
+- `test-3-bandwidth-field-selection.py`: analisi payload e selezione campi GraphQL
+- `test-4-websocket-vs-polling.py`: confronto latenza WebSocket vs polling REST
+- `test-5-rate-limiting.py`: test dimostrativo rate limiting REST/GraphQL (HTTP 429)
+- `test-6-websocket-concurrent.py`: test carico e concorrenza su WebSocket
+- `test-7-mcp-direct.py`: test tool MCP diretti (JSON-RPC)
+- `test-8-mcp-llm-orchestration.py`: orchestrazione automatica MCP/LLM (sconti, azioni batch)
+- `test-9-redis-failover.ps1`: test resilienza Redis e failover eventi
+- `test-10-prometheus-metrics.ps1`: raccolta e analisi metriche Prometheus
+- `test-11-trace-id-logging.ps1`: verifica tracciamento distribuito e logging
+- `run-all-tests.ps1`: esecuzione batch di tutti i test
 
-
-**bash**
+**Esecuzione tipica:**
 ```bash
-curl http://localhost:8080/metrics | grep api_rest_requests_total
-curl http://localhost:9090/metrics | grep graphql_requests_total
+python scripts/test-1-rest-vs-graphql-simple.py
+python scripts/test-2-rest-vs-graphql-composite.py
+python scripts/test-3-bandwidth-field-selection.py
+python scripts/test-4-websocket-vs-polling.py
+python scripts/test-5-rate-limiting.py
+python scripts/test-6-websocket-concurrent.py
+python scripts/test-7-mcp-direct.py
+python scripts/test-8-mcp-llm-orchestration.py
 ```
-**PowerShell**
+**PowerShell:**
 ```powershell
-Invoke-RestMethod http://localhost:8080/metrics | Select-String api_rest_requests_total
-Invoke-RestMethod http://localhost:9090/metrics | Select-String graphql_requests_total
-```
-
-Analizza richieste totali, latenza, errori, breakdown per endpoint/metodo.
-
-### 2. Test lato client
-
-####  REST vs GraphQL
-
-**bash**
-```bash
-cd progetto-tesi
-bash misurazioni/run-bench.sh
-```
-**powershell**
-```powershell
-cd progetto-tesi
-powershell -ExecutionPolicy Bypass -File misurazioni/run-bench.ps1
-```
-
-**File input:**
-- `query/query_1.json`: query semplice (1 risorsa)
-- `query/query_2.json`: query composta (4 risorse REST vs 1 GraphQL)
-
-**Output** (in `misurazioni/`):
-- `rest_simple.txt`, `gql_simple.txt`
-- `rest_complex.txt`, `gql_complex.txt`
-
-**Conclusione:**
-- REST vince su call atomiche (meno overhead)
-- GraphQL vince su viste composte (meno round-trip, payload ridotto con field selection)
-#### WebSocket vs Polling
-
-**WebSocket latency**
-**bash**
-```bash
-export RUNS="20"
-export WS_URL="ws://localhost:7070/ws"
-export REST_BASE="http://localhost:8080"
-node misurazioni/ws-latency.js
-```
-**powershell**
-```powershell
-$env:RUNS="20"
-$env:WS_URL="ws://localhost:7070/ws"
-$env:REST_BASE="http://localhost:8080"
-node misurazioni/ws-latency.js
-```
-
-**Polling REST**
-**bash**
-```bash
-bash misurazioni/polling-rest.sh
-```
-**powershell**
-```powershell
-powershell -File misurazioni/polling-rest.ps1
-```
-
-**Report latenza WS**
-```bash
-node misurazioni/ws-latency.js | python scripts/ws-latency-report.py
-```
-
-**Conclusione:**  WebSocket ~10x più rapido del polling.
-
-### 3. Load Testing
-
-#### Apache Bench
-
-**Bash / WSL / Linux / macOS**
-```bash
-ab -n 1000 -c 10 http://localhost:8080/products
-# Verifica throughput, error rate
-
-# Con rate limiting:
-export RATE_LIMIT="50/minute"
-docker compose up -d api-rest
-ab -n 100 -c 10 http://localhost:8080/products
-# Atteso: ~50 successi, ~50 errori 429
-```
-
-**PowerShell**
-> ⚠️ `ab` (Apache Bench) **non è disponibile nativamente su Windows**.  
-> Puoi usare WSL (Windows Subsystem for Linux) o preferire direttamente Artillery (vedi dopo).
-
-#### Artillery
-
-**Bash**
-```bash
-artillery run artillery-test-rest.yml -o misurazioni/report-rest.json
-artillery run artillery-test-graphql.yml -o misurazioni/report-graphql.json
-artillery run artillery-test-ws.yml -o misurazioni/report-ws.json
-artillery run artillery-discount-mcp.yml -o misurazioni/report-discount-mcp.json
-artillery run artillery-discount-rest.yml -o misurazioni/report-discount-rest.json
-```
-**PowerShell**
-```powershell
-artillery run artillery-test-rest.yml -o misurazioni/report-rest.json
-artillery run artillery-test-graphql.yml -o misurazioni/report-graphql.json
-artillery run artillery-test-ws.yml -o misurazioni/report-ws.json
-artillery run artillery-discount-mcp.yml -o misurazioni/report-discount-mcp.json
-artillery run artillery-discount-rest.yml -o misurazioni/report-discount-rest.json
-```
-
-Analizza i report generati in `misurazioni/`.
 
 
----
+**Output:**
+Tutti i risultati sono salvati in `risultati-misurazioni/` e includono statistiche su latenza, errori, payload, efficacia rate limit, orchestrazione MCP/LLM, failover e logging.
+
+**Dashboard:**
+La dashboard React consente di visualizzare e confrontare i risultati dei test, orchestrare azioni MCP/LLM e analizzare metriche in tempo reale.
+
+**Note:**
+- Tutti gli script sono documentati nei commenti e nel README.
+- I test sono pensati per essere riproducibili e confrontabili tra paradigmi.
 
 
 ## Osservabilità
