@@ -1,0 +1,43 @@
+{
+  "test": "REST vs GraphQL - Query Composte",
+  "data": "2026-01-26T00:58:01.165252",
+  "iterations": 40,
+  "configuration": {
+    "rest_url": "http://localhost:8080/products/",
+    "graphql_url": "http://localhost:4000/",
+    "rate_limit": "100/minute"
+  },
+  "results": {
+    "rest": {
+      "count": 40,
+      "p50": 34.10542011260986,
+      "p95": 55.93991279602051,
+      "p99": 100.61120986938477,
+      "mean": 36.760056018829346,
+      "min": 8.470773696899414,
+      "max": 110.85081100463867
+    },
+    "graphql": {
+      "count": 40,
+      "p50": 26.644110679626465,
+      "p95": 35.17460823059082,
+      "p99": 70.53995132446289,
+      "mean": 28.56730818748474,
+      "min": 7.508277893066406,
+      "max": 218.89734268188477
+    }
+  },
+  "comparison": {
+    "speedup": 21.9,
+    "winner": "GraphQL",
+    "conclusion": "GraphQL riduce round-trip su query composte"
+  },
+  "successes": {
+    "rest": 40,
+    "graphql": 40
+  },
+  "failures": {
+    "rest": 0,
+    "graphql": 0
+  }
+}

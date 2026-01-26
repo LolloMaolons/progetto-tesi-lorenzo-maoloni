@@ -13,6 +13,7 @@ from pythonjsonlogger import jsonlogger
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 RATE_LIMIT = os.getenv("RATE_LIMIT", "100/minute")
+#RATE_LIMIT = "10/minute"  # override temporaneo per test
 
 request_id_ctx: ContextVar[str] = ContextVar("request_id", default="")
 

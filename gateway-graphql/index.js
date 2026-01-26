@@ -11,6 +11,7 @@ const LOW_STOCK_THRESHOLD = parseInt(process.env.LOW_STOCK_THRESHOLD || "25", 10
 const GRAPHQL_DEPTH_LIMIT = parseInt(process.env.GRAPHQL_DEPTH_LIMIT || "7", 10);
 const INTROSPECTION_ENABLED = process.env.INTROSPECTION_ENABLED !== "false";
 const RATE_LIMIT_PER_MIN = parseInt(process.env.RATE_LIMIT_PER_MIN || "100", 10);
+//const RATE_LIMIT_PER_MIN = 10; // override temporaneo per test
 
 const logger = winston.createLogger({
   level: 'info',

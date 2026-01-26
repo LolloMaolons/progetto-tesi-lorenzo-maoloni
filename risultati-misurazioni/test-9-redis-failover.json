@@ -1,0 +1,41 @@
+﻿{
+    "data":  "2026-01-26T00:45:58.8793749+01:00",
+    "steps":  [
+                  {
+                      "step":  "Stop Redis",
+                      "status":  "start",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "Stop Redis",
+                      "status":  "done",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "Check /health degraded",
+                      "status":  "degraded",
+                      "extra":  "disconnected"
+                  },
+                  {
+                      "step":  "CRUD durante Redis down",
+                      "status":  "ok",
+                      "extra":  "[{\"id\":1,\"name\":\"Laptop Pro\",\"price\":1499.0,\"stock\":99,\"category\":\"laptop\",\"description\":\"15\\\" performance laptop\"},{\"id\":2,\"name\":\"Mouse\",\"price\":29.0,\"stock\":200,\"category\":\"accessories\",\"description\":\"Wireless ergonomic mouse\"},{\"id\":3,\"name\":\"Keyboard\",\"price\":79.0,\"stock\":120,\"category\":\"accessories\",\"description\":\"Mechanical keyboard\"},{\"id\":4,\"name\":\"Monitor 27\\\"\",\"price\":329.0,\"stock\":45,\"category\":\"monitor\",\"description\":\"27\\\" QHD IPS monitor\"},{\"id\":5,\"name\":\"Headset\",\"price\":119.0,\"stock\":80,\"category\":\"audio\",\"description\":\"Wireless noise-cancelling headset\"},{\"id\":6,\"name\":\"Webcam 4K\",\"price\":149.0,\"stock\":60,\"category\":\"accessories\",\"description\":\"4K streaming webcam\"},{\"id\":7,\"name\":\"Docking Station\",\"price\":199.0,\"stock\":35,\"category\":\"accessories\",\"description\":\"USB-C docking station\"},{\"id\":8,\"name\":\"SSD 1TB\",\"price\":129.0,\"stock\":150,\"category\":\"storage\",\"description\":\"NVMe 1TB SSD\"},{\"id\":9,\"name\":\"GPU External\",\"price\":679.15,\"stock\":8,\"category\":\"gpu\",\"description\":\"External GPU enclosure\"},{\"id\":10,\"name\":\"Laptop Air\",\"price\":999.0,\"stock\":25,\"category\":\"laptop\",\"description\":\"13\\\" ultrabook\"},{\"id\":11,\"name\":\"Smartphone Plus\",\"price\":899.0,\"stock\":55,\"category\":\"phone\",\"description\":\"6. 7\\\" OLED smartphone\"},{\"id\":12,\"name\":\"Tablet Max\",\"price\":649.0,\"stock\":40,\"category\":\"tablet\",\"description\":\"12\\\" tablet with pen\"},{\"id\":13,\"name\":\"Charger 100W\",\"price\":59.0,\"stock\":300,\"category\":\"accessories\",\"description\":\"GaN fast charger\"},{\"id\":14,\"name\":\"Router WiFi 6\",\"price\":179.0,\"stock\":70,\"category\":\"network\",\"description\":\"WiFi 6 tri-band router\"},{\"id\":15,\"name\":\"NAS 4-bay\",\"price\":466.65,\"stock\":15,\"category\":\"storage\",\"description\":\"4-bay NAS with RAID\"},{\"id\":16,\"name\":\"Printer Laser\",\"price\":229.0,\"stock\":50,\"category\":\"printer\",\"description\":\"Duplex laser printer\"},{\"id\":17,\"name\":\"Smartwatch\",\"price\":249.0,\"stock\":90,\"category\":\"wearable\",\"description\":\"Fitness smartwatch\"},{\"id\":18,\"name\":\"Earbuds Pro\",\"price\":159.0,\"stock\":180,\"category\":\"audio\",\"description\":\"ANC true wireless earbuds\"},{\"id\":19,\"name\":\"Projector 1080p\",\"price\":339.15,\"stock\":22,\"category\":\"display\",\"description\":\"Portable 1080p projector\"},{\"id\":20,\"name\":\"Action Cam\",\"price\":299.0,\"stock\":65,\"category\":\"camera\",\"description\":\"4K action camera\"}]"
+                  },
+                  {
+                      "step":  "Start Redis",
+                      "status":  "start",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "Start Redis",
+                      "status":  "done",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "Check /health healthy",
+                      "status":  "healthy",
+                      "extra":  "connected"
+                  }
+              ],
+    "test":  "Redis Failover"
+}

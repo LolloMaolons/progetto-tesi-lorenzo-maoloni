@@ -18,12 +18,14 @@ app.add_middleware(
 )
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-LLM_MODEL = os.getenv("LLM_MODEL", "llama2")
+LLM_MODEL = os.getenv("LLM_MODEL", "phi3")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
-openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
+    
 @app.post("/llm-invoke")
 async def llm_invoke(request: Request):
     """
@@ -40,14 +42,20 @@ async def llm_invoke(request: Request):
         return JSONResponse(status_code=403, content={"error": "Richiesta non consentita: puoi solo usare i tool MCP (catalog, orders, sconto, prezzo, stock, prodotto, reset)"})
 
     system_prompt = (
-    "Sei un assistente MCP. Quando ti viene chiesto di eseguire un'azione, rispondi SEMPRE e SOLO con un oggetto JSON-RPC valido per MCP, scegliendo SOLO tra questi tool:\n"
+    "You are an MCP assistant. When prompted to perform an action, ALWAYS respond ONLY with a valid MCP JSON-RPC object, choosing ONLY from these tools:\n"
     "- catalog.searchLowStock: List products with stock <= threshold\n"
-    "- catalog.applyDiscountAll: Applica uno sconto percentuale a tutti i prodotti con stock < threshold e non già scontati\n"
-    "- catalog.resetPriceAll: Resetta il prezzo base di tutti i prodotti con stock >= threshold\n"
-    "- catalog.applyDiscount: Apply percent discount to a product if not already discounted and stock < threshold\n"
+    "- catalog.applyDiscountAll: Apply a percentage discount to all products with stock < threshold and not already discounted\n"
+    "- catalog.resetPriceAll: Reset the base price of all products with stock >= threshold\n"
+    "- catalog.applyDiscount: Apply a percent discount to a product if not already discounted and stock < threshold\n"
     "- catalog.resetPrice: Reset product price to base if stock >= threshold\n"
-    "Esempio di risposta:\n"
-    '{"jsonrpc": "2.0", "id": 1, "method": "callTool", "params": {"name": "catalog.applyDiscountAll", "arguments": {"percent": 10, "threshold": 25}}}\n'
+    "- orders.notifyPending: Notify about pending orders. You can use it to notify a specific product ( product_id ).\n"
+    "Esempi di risposta:\n"
+    '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "orders.notifyPending",\n    "arguments": { "product_id": 123 }\n  }\n}'
+    '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.applyDiscount",\n    "arguments": { "product_id": 1, "percent": 10, "threshold": 25 }\n  }\n}'
+    '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.resetPrice",\n    "arguments": { "product_id": 1, "threshold": 25 }\n  }\n}'
+    '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.applyDiscountAll",\n    "arguments": { "percent": 10, "threshold": 25 }\n  }\n}'
+    '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.resetPriceAll",\n    "arguments": { "threshold": 25 }\n  }\n}'
+    '{\n  "jsonrpc": "2.0",\n  "id": 1,\n  "method": "callTool",\n  "params": {\n    "name": "catalog.searchLowStock",\n    "arguments": { "threshold": 25 }\n  }\n}'
     "Non aggiungere spiegazioni, testo extra, markdown o altro. Solo il JSON-RPC. Se la richiesta non riguarda questi tool, rispondi solo con: {\"error\": \"Posso solo aiutarti con i tool MCP.\"}"
 )
     data = {

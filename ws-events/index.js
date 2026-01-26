@@ -83,14 +83,31 @@ function checkMessageRateLimit(connectionId) {
   }
 }
 
+
 (async () => {
   const sub = createClient({ url: REDIS_URL });
-  await sub.connect();
-  
+
+  sub.on('error', (err) => {
+    logger.error('Redis client error', { error: err.message });
+  });
+  sub.on('end', () => {
+    logger.error('Redis connection closed');
+  });
+  sub.on('reconnecting', () => {
+    logger.warn('Redis client reconnecting...');
+  });
+
+  try {
+    await sub.connect();
+  } catch (err) {
+    logger.error('Failed to connect to Redis', { error: err.message });
+    process.exit(1);
+  }
+
   await sub.subscribe('events', (message) => {
     const traceId = `evt-${Date.now()}`;
     let eventData;
-    
+
     try {
       eventData = JSON.parse(message);
     } catch (err) {

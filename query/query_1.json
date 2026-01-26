@@ -1,1 +1,0 @@
-{"query":"query { product(id:1){ id name price stock lowStock } }"}

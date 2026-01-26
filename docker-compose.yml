@@ -81,6 +81,7 @@ services:
       REST_BASE_URL: http://api-rest:8080
       REDIS_URL: redis://redis:6379/0
       OLLAMA_URL: http://ollama:11434/api/chat
+      LLM_MODEL: phi3
     depends_on:
       api-rest:
         condition: service_healthy

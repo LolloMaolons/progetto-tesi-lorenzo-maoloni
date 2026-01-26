@@ -1,0 +1,16 @@
+{
+  "test": "MCP+LLM Orchestrazione",
+  "data": "2026-01-26T00:45:56.558948",
+  "iterations": 10,
+  "results": {
+    "count": 10,
+    "p50": 8921.89347743988,
+    "mean": 18962.824320793152,
+    "min": 5815.930366516113,
+    "max": 80309.39888954163
+  },
+  "accuracy": 100.0,
+  "timeouts": 0,
+  "successes": 10,
+  "failures": 0
+}

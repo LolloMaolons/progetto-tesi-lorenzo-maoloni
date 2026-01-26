@@ -1,0 +1,314 @@
+{
+  "test": "WebSocket Concorrenza Client",
+  "data": "2026-01-26T00:42:32.711636",
+  "clients": 50,
+  "results": {
+    "success": 50,
+    "fail": 0,
+    "connect_p50": 41.52321815490723,
+    "connect_p95": 62.81242370605469,
+    "welcome_p50": 0.0059604644775390625
+  },
+  "details": [
+    {
+      "idx": 0,
+      "connect": 92.30661392211914,
+      "welcome": 0.04100799560546875,
+      "success": true
+    },
+    {
+      "idx": 11,
+      "connect": 39.23177719116211,
+      "welcome": 0.010967254638671875,
+      "success": true
+    },
+    {
+      "idx": 8,
+      "connect": 42.04750061035156,
+      "welcome": 0.0045299530029296875,
+      "success": true
+    },
+    {
+      "idx": 1,
+      "connect": 46.54884338378906,
+      "welcome": 0.0152587890625,
+      "success": true
+    },
+    {
+      "idx": 12,
+      "connect": 39.05439376831055,
+      "welcome": 0.004291534423828125,
+      "success": true
+    },
+    {
+      "idx": 4,
+      "connect": 44.99459266662598,
+      "welcome": 0.039577484130859375,
+      "success": true
+    },
+    {
+      "idx": 9,
+      "connect": 41.52798652648926,
+      "welcome": 0.00667572021484375,
+      "success": true
+    },
+    {
+      "idx": 7,
+      "connect": 43.82443428039551,
+      "welcome": 0.0045299530029296875,
+      "success": true
+    },
+    {
+      "idx": 2,
+      "connect": 46.56529426574707,
+      "welcome": 0.005245208740234375,
+      "success": true
+    },
+    {
+      "idx": 6,
+      "connect": 44.4638729095459,
+      "welcome": 0.0054836273193359375,
+      "success": true
+    },
+    {
+      "idx": 13,
+      "connect": 39.380788803100586,
+      "welcome": 0.0057220458984375,
+      "success": true
+    },
+    {
+      "idx": 10,
+      "connect": 41.43095016479492,
+      "welcome": 0.0057220458984375,
+      "success": true
+    },
+    {
+      "idx": 3,
+      "connect": 46.652793884277344,
+      "welcome": 0.0050067901611328125,
+      "success": true
+    },
+    {
+      "idx": 5,
+      "connect": 45.52745819091797,
+      "welcome": 0.004291534423828125,
+      "success": true
+    },
+    {
+      "idx": 15,
+      "connect": 39.075613021850586,
+      "welcome": 0.0064373016357421875,
+      "success": true
+    },
+    {
+      "idx": 14,
+      "connect": 39.537668228149414,
+      "welcome": 0.0057220458984375,
+      "success": true
+    },
+    {
+      "idx": 16,
+      "connect": 39.16668891906738,
+      "welcome": 0.0050067901611328125,
+      "success": true
+    },
+    {
+      "idx": 17,
+      "connect": 39.092063903808594,
+      "welcome": 0.00476837158203125,
+      "success": true
+    },
+    {
+      "idx": 18,
+      "connect": 38.98334503173828,
+      "welcome": 0.0059604644775390625,
+      "success": true
+    },
+    {
+      "idx": 19,
+      "connect": 38.9103889465332,
+      "welcome": 0.0040531158447265625,
+      "success": true
+    },
+    {
+      "idx": 20,
+      "connect": 39.60871696472168,
+      "welcome": 0.0057220458984375,
+      "success": true
+    },
+    {
+      "idx": 21,
+      "connect": 39.86072540283203,
+      "welcome": 0.02956390380859375,
+      "success": true
+    },
+    {
+      "idx": 22,
+      "connect": 41.26620292663574,
+      "welcome": 0.009298324584960938,
+      "success": true
+    },
+    {
+      "idx": 23,
+      "connect": 41.25356674194336,
+      "welcome": 0.0059604644775390625,
+      "success": true
+    },
+    {
+      "idx": 25,
+      "connect": 41.00775718688965,
+      "welcome": 0.0045299530029296875,
+      "success": true
+    },
+    {
+      "idx": 24,
+      "connect": 41.258811950683594,
+      "welcome": 0.0057220458984375,
+      "success": true
+    },
+    {
+      "idx": 26,
+      "connect": 41.04185104370117,
+      "welcome": 0.0064373016357421875,
+      "success": true
+    },
+    {
+      "idx": 27,
+      "connect": 41.02635383605957,
+      "welcome": 0.0073909759521484375,
+      "success": true
+    },
+    {
+      "idx": 29,
+      "connect": 40.88282585144043,
+      "welcome": 0.010013580322265625,
+      "success": true
+    },
+    {
+      "idx": 28,
+      "connect": 41.65148735046387,
+      "welcome": 0.008106231689453125,
+      "success": true
+    },
+    {
+      "idx": 30,
+      "connect": 41.53108596801758,
+      "welcome": 0.0054836273193359375,
+      "success": true
+    },
+    {
+      "idx": 31,
+      "connect": 41.48411750793457,
+      "welcome": 0.002384185791015625,
+      "success": true
+    },
+    {
+      "idx": 33,
+      "connect": 41.20492935180664,
+      "welcome": 0.0059604644775390625,
+      "success": true
+    },
+    {
+      "idx": 32,
+      "connect": 41.640281677246094,
+      "welcome": 0.003337860107421875,
+      "success": true
+    },
+    {
+      "idx": 34,
+      "connect": 41.231632232666016,
+      "welcome": 0.00286102294921875,
+      "success": true
+    },
+    {
+      "idx": 35,
+      "connect": 41.275739669799805,
+      "welcome": 0.00286102294921875,
+      "success": true
+    },
+    {
+      "idx": 36,
+      "connect": 41.23950004577637,
+      "welcome": 0.0030994415283203125,
+      "success": true
+    },
+    {
+      "idx": 37,
+      "connect": 41.518449783325195,
+      "welcome": 0.0045299530029296875,
+      "success": true
+    },
+    {
+      "idx": 38,
+      "connect": 45.00102996826172,
+      "welcome": 0.21576881408691406,
+      "success": true
+    },
+    {
+      "idx": 39,
+      "connect": 50.945281982421875,
+      "welcome": 0.171661376953125,
+      "success": true
+    },
+    {
+      "idx": 40,
+      "connect": 55.884361267089844,
+      "welcome": 0.1704692840576172,
+      "success": true
+    },
+    {
+      "idx": 41,
+      "connect": 57.25574493408203,
+      "welcome": 0.1480579376220703,
+      "success": true
+    },
+    {
+      "idx": 42,
+      "connect": 57.80386924743652,
+      "welcome": 0.0057220458984375,
+      "success": true
+    },
+    {
+      "idx": 43,
+      "connect": 59.1130256652832,
+      "welcome": 0.3561973571777344,
+      "success": true
+    },
+    {
+      "idx": 44,
+      "connect": 60.00399589538574,
+      "welcome": 0.3826618194580078,
+      "success": true
+    },
+    {
+      "idx": 45,
+      "connect": 60.69588661193848,
+      "welcome": 0.07867813110351562,
+      "success": true
+    },
+    {
+      "idx": 46,
+      "connect": 61.15317344665527,
+      "welcome": 0.21314620971679688,
+      "success": true
+    },
+    {
+      "idx": 47,
+      "connect": 61.688899993896484,
+      "welcome": 0.1552104949951172,
+      "success": true
+    },
+    {
+      "idx": 48,
+      "connect": 62.38842010498047,
+      "welcome": 0.08273124694824219,
+      "success": true
+    },
+    {
+      "idx": 49,
+      "connect": 63.330650329589844,
+      "welcome": 0.009059906005859375,
+      "success": true
+    }
+  ]
+}

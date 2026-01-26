@@ -1,0 +1,54 @@
+{
+  "test": "REST vs GraphQL - Query Semplici",
+  "data": "2026-01-26T00:56:39.861794",
+  "iterations": 40,
+  "configuration": {
+    "rest_url": "http://localhost:8080/products",
+    "graphql_url": "http://localhost:4000/",
+    "rate_limit": "100/minute"
+  },
+  "results": {
+    "rest": {
+      "count": 40,
+      "p50": 14.941692352294922,
+      "p95": 28.002500534057617,
+      "p99": 28.766870498657227,
+      "mean": 16.576188802719116,
+      "min": 3.5834312438964844,
+      "max": 56.6105842590332
+    },
+    "graphql_A": {
+      "count": 40,
+      "p50": 25.70497989654541,
+      "p95": 31.641483306884766,
+      "p99": 33.37907791137695,
+      "mean": 21.657544374465942,
+      "min": 5.699634552001953,
+      "max": 35.20345687866211
+    },
+    "graphql_B": {
+      "count": 40,
+      "p50": 12.604355812072754,
+      "p95": 29.856204986572266,
+      "p99": 30.108213424682617,
+      "mean": 15.970087051391602,
+      "min": 5.747556686401367,
+      "max": 31.539201736450195
+    }
+  },
+  "comparison": {
+    "overhead": 1.72,
+    "winner": "REST",
+    "conclusion": "REST pi\u00f9 veloce su query atomiche"
+  },
+  "successes": {
+    "rest": 40,
+    "graphql_A": 40,
+    "graphql_B": 40
+  },
+  "failures": {
+    "rest": 0,
+    "graphql_A": 0,
+    "graphql_B": 0
+  }
+}

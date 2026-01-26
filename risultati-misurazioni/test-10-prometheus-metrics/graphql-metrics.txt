@@ -1,0 +1,24 @@
+﻿# HELP graphql_requests_total Total GraphQL requests
+# TYPE graphql_requests_total counter
+graphql_requests_total{operation="anonymous",status="success"} 100
+
+# HELP graphql_request_duration_seconds GraphQL request duration
+# TYPE graphql_request_duration_seconds histogram
+graphql_request_duration_seconds_bucket{le="0.005",operation="anonymous"} 98
+graphql_request_duration_seconds_bucket{le="0.01",operation="anonymous"} 99
+graphql_request_duration_seconds_bucket{le="0.025",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="0.05",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="0.1",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="0.25",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="0.5",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="1",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="2.5",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="5",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="10",operation="anonymous"} 100
+graphql_request_duration_seconds_bucket{le="+Inf",operation="anonymous"} 100
+graphql_request_duration_seconds_sum{operation="anonymous"} 0.35700000000000026
+graphql_request_duration_seconds_count{operation="anonymous"} 100
+
+# HELP graphql_errors_total Total GraphQL errors
+# TYPE graphql_errors_total counter
+

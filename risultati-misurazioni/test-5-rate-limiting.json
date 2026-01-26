@@ -1,0 +1,38 @@
+{
+  "test": "Rate Limiting",
+  "data": "2026-01-26T01:37:33.956706",
+  "iterations": 25,
+  "configuration": {
+    "rest_url": "http://localhost:8080/products",
+    "graphql_url": "http://localhost:4000/",
+    "rate_limit": "10/minute"
+  },
+  "results": {
+    "rest": {
+      "latency": {
+        "count": 10,
+        "mean": 20.80700397491455,
+        "min": 6.594419479370117,
+        "max": 35.30263900756836
+      },
+      "codes": {
+        "200": 10,
+        "429": 15,
+        "efficacy": 100.0
+      }
+    },
+    "graphql": {
+      "latency": {
+        "count": 9,
+        "mean": 26.209274927775066,
+        "min": 10.261058807373047,
+        "max": 38.44118118286133
+      },
+      "codes": {
+        "200": 9,
+        "429": 16,
+        "efficacy": 106.7
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+﻿{
+    "data":  "2026-01-26T00:46:36.2669670+01:00",
+    "graphql_found":  true,
+    "steps":  [
+                  {
+                      "step":  "REST request sent",
+                      "status":  "ok",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "Trace ID in REST logs",
+                      "status":  "found",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "GraphQL request sent",
+                      "status":  "ok",
+                      "extra":  ""
+                  },
+                  {
+                      "step":  "Trace ID in GraphQL logs",
+                      "status":  "found",
+                      "extra":  ""
+                  }
+              ],
+    "trace_id":  "trace-20260126004636264",
+    "propagation":  true,
+    "test":  "Trace ID Logging",
+    "rest_found":  true
+}
