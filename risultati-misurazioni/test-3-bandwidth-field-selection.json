@@ -1,6 +1,6 @@
 {
   "test": "Bandwidth Efficiency - Field Selection",
-  "data": "2026-01-26T09:14:22.881371",
+  "data": "2026-01-26T17:28:53.958562",
   "configuration": {
     "rest_url": "http://localhost:8080/products",
     "graphql_url": "http://localhost:4000/"
@@ -30,11 +30,35 @@
         "headers": 185,
         "total": 299
       },
-      "graphql": {
+      "graphql_all": {
         "payload": 136,
         "headers": 198,
         "total": 334
-      }
+      },
+      "graphql_selective": {
+        "payload": 65,
+        "headers": 197,
+        "total": 262
+      },
+      "reduction_percent": 43.0
+    },
+    "scenario_3": {
+      "rest_5": {
+        "payload": 2302,
+        "headers": 1850,
+        "total": 4152
+      },
+      "graphql_5_all": {
+        "payload": 1024,
+        "headers": 200,
+        "total": 1224
+      },
+      "graphql_5_selective": {
+        "payload": 967,
+        "headers": 199,
+        "total": 1166
+      },
+      "reduction_percent": 58.0
     }
   }
 }

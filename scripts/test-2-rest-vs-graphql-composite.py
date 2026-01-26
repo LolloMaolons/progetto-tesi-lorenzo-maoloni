@@ -44,32 +44,44 @@ def execute_rest():
     successes = 0
     failures = 0
     for i in range(ITERATIONS):
-        product_id = (i % 20) + 1
-        try:
-            start = time.time()
-            r1 = requests.get(REST_URL + str(product_id), timeout=5)
-            t1 = (time.time() - start) * 1000
-            if r1.status_code == 429:
-                print("Rate limited, attesa 60s...")
-                time.sleep(60)
-                continue
-            if r1.status_code != 200:
+        # Seleziona 5 product_id distinti per questa iterazione
+        product_ids = [((i * 5 + j) % 20) + 1 for j in range(5)]
+        iter_latency = 0
+        iter_success = True
+        for product_id in product_ids:
+            try:
+                start = time.time()
+                r1 = requests.get(REST_URL + str(product_id), timeout=5)
+                t1 = (time.time() - start) * 1000
+                if r1.status_code == 429:
+                    print("Rate limited, attesa 60s...")
+                    time.sleep(60)
+                    iter_success = False
+                    break
+                if r1.status_code != 200:
+                    failures += 1
+                    iter_success = False
+                    break
+                start2 = time.time()
+                r2 = requests.get(REST_REC_URL.format(product_id), timeout=5)
+                t2 = (time.time() - start2) * 1000
+                if r2.status_code == 429:
+                    print("Rate limited, attesa 60s...")
+                    time.sleep(60)
+                    iter_success = False
+                    break
+                if r2.status_code != 200:
+                    failures += 1
+                    iter_success = False
+                    break
+                iter_latency += t1 + t2
+            except Exception:
                 failures += 1
-                continue
-            start2 = time.time()
-            r2 = requests.get(REST_REC_URL.format(product_id), timeout=5)
-            t2 = (time.time() - start2) * 1000
-            if r2.status_code == 429:
-                print("Rate limited, attesa 60s...")
-                time.sleep(60)
-                continue
-            if r2.status_code != 200:
-                failures += 1
-                continue
-            latencies.append(t1 + t2)
+                iter_success = False
+                break
+        if iter_success:
+            latencies.append(iter_latency)
             successes += 1
-        except Exception:
-            failures += 1
     return latencies, successes, failures
 
 def execute_graphql():
@@ -77,15 +89,16 @@ def execute_graphql():
     successes = 0
     failures = 0
     for i in range(ITERATIONS):
-        product_id = (i % 20) + 1
+        # Seleziona 5 product_id distinti per questa iterazione
+        product_ids = [((i * 5 + j) % 20) + 1 for j in range(5)]
+        # Costruisci la query GraphQL per più prodotti
+        products_query = "\n".join([
+            f"p{pid}: product(id: {pid}) {{ id name price stock recommendations(limit: 3) {{ id name price }} }}"
+            for pid in product_ids
+        ])
         query = f"""
         {{
-          product(id: {product_id}) {{
-            id name price stock
-            recommendations(limit: 3) {{
-              id name price
-            }}
-          }}
+        {products_query}
         }}
         """
         start = time.time()
