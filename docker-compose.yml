@@ -33,7 +33,7 @@ services:
     environment:
       REST_BASE_URL: http://api-rest:8080
       GRAPHQL_DEPTH_LIMIT: ${GRAPHQL_DEPTH_LIMIT:-7}
-      INTROSPECTION_ENABLED: "false"
+      INTROSPECTION_ENABLED: "true"
     depends_on:
       api-rest:
         condition: service_healthy
