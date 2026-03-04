@@ -37,7 +37,7 @@ L’obiettivo è fornire un’architettura di riferimento, facilmente testabile 
 ## Prerequisiti
 
 - **Docker** e **Docker Compose**
-- **Node.js** (per wscat, artillery, dashboard)
+- **Node.js** (per wscat, dashboard)
 - **Python 3.11+** (opzionale: test locali, MCP host)
 
 
@@ -52,13 +52,7 @@ git clone https://github.com/LolloMaolons/progetto-tesi-lorenzo-maoloni.git
 cd progetto-tesi-lorenzo-maoloni
 ```
 
-### 2. Installa Artillery
-
-```bash
-npm install -g artillery
-```
-
-### 3. Installa wscat
+### 2. Installa wscat
 
 ```bash
 npm install -g wscat

@@ -44,7 +44,6 @@ def execute_rest():
     successes = 0
     failures = 0
     for i in range(ITERATIONS):
-        # Seleziona 5 product_id distinti per questa iterazione
         product_ids = [((i * 5 + j) % 20) + 1 for j in range(5)]
         iter_latency = 0
         iter_success = True
@@ -89,9 +88,7 @@ def execute_graphql():
     successes = 0
     failures = 0
     for i in range(ITERATIONS):
-        # Seleziona 5 product_id distinti per questa iterazione
         product_ids = [((i * 5 + j) % 20) + 1 for j in range(5)]
-        # Costruisci la query GraphQL per più prodotti
         products_query = "\n".join([
             f"p{pid}: product(id: {pid}) {{ id name price stock recommendations(limit: 3) {{ id name price }} }}"
             for pid in product_ids
